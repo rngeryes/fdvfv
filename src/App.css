@@ -128,13 +128,13 @@
 }
 
 .btn--primary {
-  background: #3b82f6;
+  background: #017aff;
   color: #fff;
 }
 
 .btn--secondary {
   background: #dde6f5;
-  color: #3b82f6;
+  color: #017aff;
 }
 
 /* ── Coin cards ── */
@@ -148,7 +148,7 @@
 .coin-card {
   background: #fff;
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 18px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -173,7 +173,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .coin-card__symbol {
@@ -193,7 +193,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: 6px;
 }
 
 .coin-card__fiat {
