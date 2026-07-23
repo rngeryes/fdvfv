@@ -1,8 +1,8 @@
-/* ── Shell ── */
+/* ── Shell — фон в цвет интерфейса, никаких черных полос ── */
 .shell {
   width: 100vw;
   height: 100vh;
-  background: #000;
+  background: #eef1f6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,17 +23,18 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 28px 16px 24px;
+  padding: 40px 14px 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  background: #eef1f6;
 }
 
 .content::-webkit-scrollbar { display: none; }
 
 /* ── Balance ── */
 .balance {
-  padding: 4px 4px 8px;
+  padding: 0 2px 4px;
 }
 
 .balance__row {
@@ -43,24 +44,25 @@
 }
 
 .balance__label {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   color: #3c3c43;
-  margin: 0 0 6px;
+  margin: 0 0 5px;
 }
 
 .balance__amount {
-  font-size: 40px;
+  font-size: 28px;
   font-weight: 700;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Helvetica Neue', Arial, sans-serif;
   color: #000;
-  letter-spacing: -1.5px;
-  line-height: 1.05;
-  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  margin: 0 0 5px;
 }
 
 .balance__sub {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 400;
   color: #8a8a8e;
   margin: 0;
@@ -69,9 +71,9 @@
 .balance__badge {
   position: relative;
   background: #dde6f5;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,17 +83,17 @@
 
 .balance__notif {
   position: absolute;
-  top: -7px;
-  right: -7px;
+  top: -6px;
+  right: -6px;
   background: #ff3b30;
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   border-radius: 20px;
-  padding: 0 5px;
-  height: 17px;
-  line-height: 17px;
-  min-width: 17px;
+  padding: 0 4px;
+  height: 15px;
+  line-height: 15px;
+  min-width: 15px;
   text-align: center;
   border: 1.5px solid #eef1f6;
 }
@@ -99,22 +101,23 @@
 /* ── Buttons ── */
 .btn-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .btn {
   flex: 1;
-  height: 52px;
+  height: 46px;
   border: none;
-  border-radius: 14px;
-  font-size: 16px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   letter-spacing: -0.2px;
   transition: opacity 0.15s, transform 0.1s;
 }
@@ -138,17 +141,17 @@
 .coin-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 7px;
+  margin-top: 36px;
 }
 
 .coin-card {
   background: #fff;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   cursor: pointer;
   transition: opacity 0.12s;
 }
@@ -159,8 +162,8 @@
 
 .coin-card__icon {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,18 +173,18 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .coin-card__symbol {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   color: #000;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .coin-card__name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   color: #8a8a8e;
 }
@@ -190,18 +193,18 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
+  gap: 2px;
 }
 
 .coin-card__fiat {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   color: #000;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .coin-card__amount {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   color: #8a8a8e;
 }
