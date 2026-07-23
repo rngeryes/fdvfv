@@ -92,7 +92,7 @@ export default function App() {
               <div className="balance__badge">
                 <div className="balance__notif">9+</div>
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                  <path d="M4 6h16M4 11h16M4 16h10" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round"/>
+                  <path d="M4 6h16M4 11h16M4 16h10" stroke="#017aff" strokeWidth="1.8" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -101,16 +101,19 @@ export default function App() {
           {/* Buttons */}
           <div className="btn-row">
             <button className="btn btn--primary" type="button">
-              <svg viewBox="0 0 22 22" width="18" height="18" fill="none">
-                <circle cx="11" cy="11" r="10" stroke="#fff" strokeWidth="1.7"/>
-                <path d="M11 7v8M7 11h8" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+              {/* белый круг + синий плюс */}
+              <svg viewBox="0 0 22 22" width="20" height="20" fill="none">
+                <circle cx="11" cy="11" r="11" fill="#fff"/>
+                <path d="M11 6v10M6 11h10" stroke="#017aff" strokeWidth="2" strokeLinecap="round"/>
               </svg>
               Deposit
             </button>
             <button className="btn btn--secondary" type="button">
-              <svg viewBox="0 0 22 22" width="18" height="18" fill="none">
-                <circle cx="11" cy="11" r="10" stroke="#3b82f6" strokeWidth="1.7"/>
-                <path d="M11 7v8M7 14l4 4 4-4" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              {/* синий круг + белая стрелка вверх */}
+              <svg viewBox="0 0 22 22" width="20" height="20" fill="none">
+                <circle cx="11" cy="11" r="11" fill="#017aff"/>
+                <path d="M11 16V7" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M7 11l4-4 4 4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               Withdraw
             </button>
