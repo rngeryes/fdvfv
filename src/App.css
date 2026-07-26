@@ -80,7 +80,9 @@
 
 .profile-scroll {
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .profile-info-card {
@@ -1081,8 +1083,8 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -55%);
-  width: 110px;
-  height: 110px;
+  width: 143px;
+  height: 143px;
   z-index: 2;
   pointer-events: none;
 }
