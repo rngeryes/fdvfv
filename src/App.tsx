@@ -15,19 +15,19 @@ interface Gift {
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const GIFTS: Gift[] = [
   { id: 1,  name: 'Plush Pepe',       stars: 1000 },
-  { id: 2,  name: 'Party Sparkler',   stars: 320  },
+  { id: 2,  name: 'Desk Calendar',   stars: 320  },
   { id: 3,  name: 'Chill Flame',      stars: 320  },
-  { id: 4,  name: 'Cookie Heart',     stars: 280  },
+  { id: 4,  name: 'Heart Locket',     stars: 280  },
   { id: 5,  name: 'Moon Pendant',     stars: 240  },
   { id: 6,  name: 'Crystal Ball',     stars: 200  },
   { id: 7,  name: 'Voodoo Doll',      stars: 110  },
   { id: 8,  name: 'Vice Cream',       stars: 90   },
-  { id: 9,  name: 'Jolly Chimp',      stars: 90   },
-  { id: 10, name: 'Snake Box',        stars: 80   },
+  { id: 9,  name: 'Durov Cap',      stars: 90   },
+  { id: 10, name: 'Neko Helmet',        stars: 80   },
   { id: 11, name: 'Lunar Snake',      stars: 50   },
   { id: 12, name: 'Loot Bag',         stars: 40   },
   { id: 13, name: 'Pet Snake',        stars: 25   },
-  { id: 14, name: 'Instant Ramen',    stars: 25   },
+  { id: 14, name: 'Signet Ring',    stars: 25   },
 ]
 
 // Маппинг подарков к SVG файлам
@@ -48,39 +48,64 @@ const GIFT_ICONS: Record<number, string> = {
   14: '/gifts/signetring.svg',
 }
 
-// ─── Plush Pepe CDN Data ──────────────────────────────────────────────────────
-const PEPE_CDN = 'https://cdn.changes.tg/gifts'
+// ─── CDN ──────────────────────────────────────────────────────────────────────
+const CDN = 'https://cdn.changes.tg/gifts'
 
-// Backdrops for Plush Pepe (subset of nice ones from backdrops.json)
-const PEPE_BACKDROPS = [
-  { centerColor: '#7dd481', edgeColor: '#3a8c49', patternColor: '#1a5e2a', name: 'Green' },
-  { centerColor: '#ca70c6', edgeColor: '#9662d4', patternColor: '#620fb4', name: 'Electric Purple' },
-  { centerColor: '#7596f9', edgeColor: '#6862e4', patternColor: '#2828bc', name: 'Neon Blue' },
-  { centerColor: '#f9b004', edgeColor: '#e07300', patternColor: '#7a2500', name: 'Golden' },
-  { centerColor: '#f97f7f', edgeColor: '#d44040', patternColor: '#8b0000', name: 'Red' },
-  { centerColor: '#58b4c8', edgeColor: '#538bc2', patternColor: '#07609b', name: 'Sky Blue' },
-  { centerColor: '#363738', edgeColor: '#0e0f0f', patternColor: '#6c6868', name: 'Black' },
-  { centerColor: '#b789e4', edgeColor: '#8a5abc', patternColor: '#5b10ab', name: 'Lavender' },
-]
+// Маппинг id гифта → точное имя папки на CDN
+const GIFT_CDN_NAME: Record<number, string> = {
+  1:  'Plush Pepe',
+  2:  'Desk Calendar',
+  3:  'Chill Flame',
+  4:  'Heart Locket',
+  5:  'Moon Pendant',
+  6:  'Crystal Ball',
+  7:  'Voodoo Doll',
+  8:  'Vice Cream',
+  9:  "Durov's Cap",
+  10: 'Neko Helmet',
+  11: 'Lunar Snake',
+  12: 'Loot Bag',
+  13: 'Pet Snake',
+  14: 'Signet Ring',
+}
 
-// Lottie model names for Plush Pepe
-const PEPE_MODELS = [
-  'Original',
-  'Aqua Plush',
-  'Gummy Frog',
-  'Emerald Plush',
-  'Hothead',
-  'Hue Jester',
-  'Kung Fu Pepe',
-  'Midas Pepe',
-  'Sketchy',
-  'Yellow Hug',
-  'Frozen',
-  'Pepemint',
-]
+// ─── CDN types ────────────────────────────────────────────────────────────────
+interface CdnBackdrop {
+  name: string
+  hex: { centerColor: string; edgeColor: string; patternColor: string }
+}
 
-// Pattern transforms for backdrop SVG
-const PEPE_PATTERN_TRANSFORMS = [
+interface CdnModel {
+  name: string
+  rarityPermille: number
+  crafted?: boolean
+}
+
+// ─── CDN cache ────────────────────────────────────────────────────────────────
+let _backdropsCache: CdnBackdrop[] | null = null
+const _modelsCache: Record<string, CdnModel[]> = {}
+
+async function fetchBackdrops(): Promise<CdnBackdrop[]> {
+  if (_backdropsCache) return _backdropsCache
+  const r = await fetch(`${CDN}/backdrops.json`)
+  const data = await r.json()
+  _backdropsCache = data
+  return data
+}
+
+async function fetchModels(giftName: string): Promise<CdnModel[]> {
+  if (_modelsCache[giftName]) return _modelsCache[giftName]
+  const r = await fetch(`${CDN}/models/${encodeURIComponent(giftName)}/models.json`)
+  const data: CdnModel[] = await r.json()
+  // берём только не-crafted, shuffle первые 12
+  const normal = data.filter(m => !m.crafted)
+  const shuffled = normal.sort(() => Math.random() - 0.5).slice(0, 12)
+  _modelsCache[giftName] = shuffled
+  return shuffled
+}
+
+// Pattern transforms for backdrop SVG (универсальные)
+const PATTERN_TRANSFORMS = [
   { opacity: 0.1, tx: 106.08, ty: 29.12, scale: 0.3328 },
   { opacity: 0.1, tx: 309.92, ty: 29.12, scale: 0.3328 },
   { opacity: 0.1, tx: -2.08, ty: 166.4, scale: 0.3328 },
@@ -98,17 +123,19 @@ const PEPE_PATTERN_TRANSFORMS = [
   { opacity: 0.24, tx: 208, ty: 320.32, scale: 0.3744 },
 ]
 
-// ─── Lottie Player wrapper (react-lottie-player) ──────────────────────────────
-function PepeLottie({
+// ─── GiftLottie — универсальный плеер для любого гифта ───────────────────────
+function GiftLottie({
+  giftName,
   modelName,
   onReady,
   className,
 }: {
+  giftName: string
   modelName: string
   onReady?: () => void
   className?: string
 }) {
-  const url = `${PEPE_CDN}/models/Plush%20Pepe/lottie/${encodeURIComponent(modelName)}.json`
+  const url = `${CDN}/models/${encodeURIComponent(giftName)}/lottie/${encodeURIComponent(modelName)}.json`
   const notified = useRef(false)
 
   const handleLoad = useCallback(() => {
@@ -134,38 +161,74 @@ function PepeLottie({
 // ─── Upgrade Modal ────────────────────────────────────────────────────────────
 const CYCLE_MS = 3500
 
-function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function UpgradeModal({
+  isOpen,
+  giftId,
+  onClose,
+}: {
+  isOpen: boolean
+  giftId: number | null
+  onClose: () => void
+}) {
   const [idx, setIdx] = useState(0)
   const [allReady, setAllReady] = useState(false)
-  const total = Math.min(PEPE_BACKDROPS.length, PEPE_MODELS.length)
+  const [backdrops, setBackdrops] = useState<CdnBackdrop[]>([])
+  const [models, setModels] = useState<CdnModel[]>([])
   const loadedCount = useRef(0)
 
-  // Reset on open
-  useEffect(() => {
-    if (isOpen) {
-      setIdx(0)
-      setAllReady(false)
-      loadedCount.current = 0
-      // фолбэк — показываем TGS через 4 секунды даже если onLoad не сработал
-      const fallback = setTimeout(() => setAllReady(true), 4000)
-      return () => clearTimeout(fallback)
-    }
-  }, [isOpen])
+  const giftName = giftId ? GIFT_CDN_NAME[giftId] ?? null : null
+  const total = Math.min(backdrops.length, models.length)
 
-  // Cycle every CYCLE_MS
+  // Загружаем данные при открытии
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !giftName) return
+
+    setIdx(0)
+    setAllReady(false)
+    setBackdrops([])
+    setModels([])
+    loadedCount.current = 0
+
+    let cancelled = false
+
+    Promise.all([fetchBackdrops(), fetchModels(giftName)]).then(([bds, mds]) => {
+      if (cancelled) return
+      // берём 8 случайных бэкдропов
+      const shuffledBds = [...bds].sort(() => Math.random() - 0.5).slice(0, 8)
+      setBackdrops(shuffledBds)
+      setModels(mds)
+    })
+
+    // фолбэк — показываем TGS через 5с даже если onLoad не сработал
+    const fallback = setTimeout(() => { if (!cancelled) setAllReady(true) }, 5000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(fallback)
+    }
+  }, [isOpen, giftName])
+
+  // Цикл смены слайда
+  useEffect(() => {
+    if (!isOpen || total === 0) return
     const timer = setInterval(() => setIdx(i => (i + 1) % total), CYCLE_MS)
     return () => clearInterval(timer)
   }, [isOpen, total])
 
   const handleTgsReady = useCallback(() => {
     loadedCount.current += 1
-    if (loadedCount.current >= total) setAllReady(true)
-  }, [total])
+    if (loadedCount.current >= models.length) setAllReady(true)
+  }, [models.length])
 
-  const backdrop = PEPE_BACKDROPS[idx % PEPE_BACKDROPS.length]
-  const modelName = PEPE_MODELS[idx % PEPE_MODELS.length]
+  const backdrop = backdrops[idx % Math.max(backdrops.length, 1)]
+  const model = models[idx % Math.max(models.length, 1)]
+
+  const centerColor = backdrop?.hex?.centerColor ?? '#363738'
+  const edgeColor = backdrop?.hex?.edgeColor ?? '#0e0f0f'
+  const patternColor = backdrop?.hex?.patternColor ?? '#6c6868'
+  const pngUrl = giftName && model
+    ? `${CDN}/models/${encodeURIComponent(giftName)}/png/${encodeURIComponent(model.name)}.png`
+    : `${CDN}/models/Plush%20Pepe/png/Original.png`
 
   return (
     <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
@@ -179,11 +242,11 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <IconClose />
           </button>
 
-          {/* Фон — плавно меняет цвет через framer-motion animate */}
+          {/* Фон — плавно меняет цвет через framer-motion */}
           <motion.div
             className="upgrade-backdrop"
             animate={{
-              background: `radial-gradient(50% 65% at 50% 35%, ${backdrop.centerColor} 0%, ${backdrop.edgeColor} 100%)`,
+              background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)`,
             }}
             transition={{ duration: CYCLE_MS / 1000 * 0.35, ease: 'easeInOut' }}
           >
@@ -196,15 +259,15 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             >
               <defs>
                 <filter id="upflt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
-                  <feFlood floodColor={backdrop.patternColor} />
+                  <feFlood floodColor={patternColor} />
                   <feComposite in2="SourceGraphic" operator="in" />
                 </filter>
                 <image id="uppat" x="-50" y="-50" width="100" height="100"
-                  href="https://cdn.changes.tg/gifts/models/Plush%20Pepe/png/Original.png"
+                  href={pngUrl}
                   crossOrigin="anonymous"
                 />
                 <g id="upgrp">
-                  {PEPE_PATTERN_TRANSFORMS.map((t, i) => (
+                  {PATTERN_TRANSFORMS.map((t, i) => (
                     <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
                       <use href="#uppat" />
                     </g>
@@ -216,36 +279,41 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           </motion.div>
 
           {/* Все TGS грузятся скрытно; появляются когда все загружены */}
-          <div
-            className="upgrade-lottie-wrap"
-            style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
-          >
-            {PEPE_MODELS.slice(0, total).map((name, i) => (
-              <motion.div
-                key={name}
-                className="upgrade-lottie-slot"
-                animate={{ opacity: i === idx ? 1 : 0 }}
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
-              >
-                <PepeLottie
-                  modelName={name}
-                  onReady={handleTgsReady}
-                  className="upgrade-lottie"
-                />
-              </motion.div>
-            ))}
-          </div>
+          {giftName && models.length > 0 && (
+            <div
+              className="upgrade-lottie-wrap"
+              style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
+            >
+              {models.map((m, i) => (
+                <motion.div
+                  key={m.name}
+                  className="upgrade-lottie-slot"
+                  animate={{ opacity: i === idx ? 1 : 0 }}
+                  transition={{ duration: 0.5, ease: 'easeInOut' }}
+                >
+                  <GiftLottie
+                    giftName={giftName}
+                    modelName={m.name}
+                    onReady={handleTgsReady}
+                    className="upgrade-lottie"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
 
-          {/* Бейдж — плавно меняется без мигания */}
-          <motion.div
-            key={modelName}
-            className="upgrade-model-badge"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
-          >
-            {modelName}
-          </motion.div>
+          {/* Бейдж с именем модели */}
+          {model && (
+            <motion.div
+              key={model.name}
+              className="upgrade-model-badge"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, ease: 'easeInOut' }}
+            >
+              {model.name}
+            </motion.div>
+          )}
         </div>
 
         {/* Title */}
@@ -583,7 +651,7 @@ function ProfilePage({
 }: {
   onGifts: () => void
   onShowRating: () => void
-  onShowUpgrade: () => void
+  onShowUpgrade: (giftId: number) => void
 }) {
   return (
     <div className="profile-root">
@@ -612,56 +680,31 @@ function ProfilePage({
 
           <div className="profile-gifts-area">
             <div className="profile-gifts-grid">
-              {/* Plush Pepe gift card */}
-              <div
-                className="profile-gift-cell"
-                onClick={onShowUpgrade}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => e.key === 'Enter' && onShowUpgrade()}
-              >
-                {/* Backdrop */}
+              {GIFTS.map(gift => (
                 <div
-                  className="profile-gift-backdrop"
-                  style={{
-                    background: 'radial-gradient(50% 65% at 50% 35%, #7dd481 0%, #3a8c49 100%)',
-                  }}
+                  key={gift.id}
+                  className="profile-gift-cell"
+                  onClick={() => onShowUpgrade(gift.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => e.key === 'Enter' && onShowUpgrade(gift.id)}
                 >
-                  <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
-                    <defs>
-                      <filter id="pg-flt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
-                        <feFlood floodColor="#1a5e2a" />
-                        <feComposite in2="SourceGraphic" operator="in" />
-                      </filter>
-                      <image id="pg-pat" x="-50" y="-50" width="100" height="100"
-                        href="https://cdn.changes.tg/gifts/models/Plush%20Pepe/png/Original.png"
-                        crossOrigin="anonymous"
+                  <div className="profile-gift-backdrop" style={{ background: '#1C1C1D' }} />
+                  <div className="profile-gift-img">
+                    {GIFT_ICONS[gift.id] ? (
+                      <img
+                        src={GIFT_ICONS[gift.id]}
+                        alt={gift.name}
+                        className="profile-gift-icon"
+                        draggable={false}
                       />
-                      <g id="pg-grp">
-                        {PEPE_PATTERN_TRANSFORMS.map((t, i) => (
-                          <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
-                            <use href="#pg-pat" />
-                          </g>
-                        ))}
-                      </g>
-                    </defs>
-                    <use href="#pg-grp" filter="url(#pg-flt)" />
-                  </svg>
+                    ) : (
+                      <div className="profile-gift-icon" style={{ background: '#2a2a2a', borderRadius: 12 }} />
+                    )}
+                  </div>
+                  <div className="profile-gift-ribbon"><span>#{gift.id}</span></div>
                 </div>
-                {/* Gift image */}
-                <div className="profile-gift-img">
-                  <img
-                    src="/gifts/Pepe.svg"
-                    alt="Plush Pepe"
-                    className="profile-gift-icon"
-                    draggable={false}
-                  />
-                </div>
-                {/* Ribbon */}
-                <div className="profile-gift-ribbon">
-                  <span>#1</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -886,11 +929,13 @@ export default function App() {
   const [page, setPage] = useState<Page>('profile')
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null)
   const [showRating, setShowRating] = useState(false)
-  const [showUpgrade, setShowUpgrade] = useState(false)
+  const [upgradeGiftId, setUpgradeGiftId] = useState<number | null>(null)
 
   function goGifts() { setPage('gifts') }
   function goProfile() { setPage('profile') }
   function goBuy(g: Gift) { setSelectedGift(g); setPage('buy') }
+  function openUpgrade(giftId: number) { setUpgradeGiftId(giftId) }
+  function closeUpgrade() { setUpgradeGiftId(null) }
 
   return (
     <div className="app-root">
@@ -898,7 +943,7 @@ export default function App() {
         <ProfilePage
           onGifts={goGifts}
           onShowRating={() => setShowRating(true)}
-          onShowUpgrade={() => setShowUpgrade(true)}
+          onShowUpgrade={openUpgrade}
         />
       )}
       {page === 'gifts' && (
@@ -908,7 +953,11 @@ export default function App() {
         <BuyPage gift={selectedGift} onBack={goGifts} />
       )}
       <RatingModal isOpen={showRating} onClose={() => setShowRating(false)} />
-      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <UpgradeModal
+        isOpen={upgradeGiftId !== null}
+        giftId={upgradeGiftId}
+        onClose={closeUpgrade}
+      />
     </div>
   )
 }
