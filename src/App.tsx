@@ -199,6 +199,7 @@ function UpgradeModal({
   onUpgraded?: (result: UpgradeResult) => void
 }) {
   const [idx, setIdx] = useState(0)
+  const [rouletteIdx, setRouletteIdx] = useState(0)
   const [allReady, setAllReady] = useState(false)
   const [backdrops, setBackdrops] = useState<CdnBackdrop[]>([])
   const [models, setModels] = useState<CdnModel[]>([])
@@ -261,10 +262,23 @@ function UpgradeModal({
     return () => clearInterval(timer)
   }, [isOpen, phase, total])
 
+  // Быстрый цикл фонов во время рулетки — меняет фон каждые 150мс
+  useEffect(() => {
+    if (!isOpen || phase !== 'upgrading' || backdrops.length === 0) return
+    const timer = setInterval(() => {
+      setRouletteIdx(i => (i + 1) % backdrops.length)
+    }, 150)
+    return () => clearInterval(timer)
+  }, [isOpen, phase, backdrops.length])
+
   const handleTgsReady = useCallback(() => { setAllReady(true) }, [])
 
-  // Текущие данные для отображения (в result берём выигравшие)
-  const activeBackdrop = phase === 'result' && result ? result.backdrop : backdrops[idx % Math.max(backdrops.length, 1)]
+  // Текущие данные для отображения (в result берём выигравшие, в upgrading — быстро мигающие бэкдропы)
+  const activeBackdrop = phase === 'result' && result
+    ? result.backdrop
+    : phase === 'upgrading' && backdrops.length > 0
+      ? backdrops[rouletteIdx % backdrops.length]
+      : backdrops[idx % Math.max(backdrops.length, 1)]
   const activeModel    = phase === 'result' && result ? result.model    : models[idx % Math.max(models.length, 1)]
 
   const centerColor  = activeBackdrop?.hex?.centerColor  ?? '#363738'
@@ -299,7 +313,10 @@ function UpgradeModal({
             animate={{
               background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)`,
             }}
-            transition={{ duration: CYCLE_MS / 1000 * 0.35, ease: 'easeInOut' }}
+            transition={{
+              duration: phase === 'upgrading' ? 0.12 : CYCLE_MS / 1000 * 0.35,
+              ease: 'easeInOut'
+            }}
           >
             <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
               <defs>
