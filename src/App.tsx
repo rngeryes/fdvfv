@@ -200,11 +200,13 @@ function UpgradeModal({
 }) {
   const [idx, setIdx] = useState(0)
   const [rouletteIdx, setRouletteIdx] = useState(0)
+  const [bgTransitionDur, setBgTransitionDur] = useState(0.12)
   const [allReady, setAllReady] = useState(false)
   const [backdrops, setBackdrops] = useState<CdnBackdrop[]>([])
   const [models, setModels] = useState<CdnModel[]>([])
   const [phase, setPhase] = useState<'preview' | 'upgrading' | 'result'>('preview')
   const [result, setResult] = useState<UpgradeResult | null>(null)
+  const reelRef = useRef<CdnModel[]>([])
 
   const giftName = giftId ? GIFT_CDN_NAME[giftId] ?? null : null
   const total = Math.min(backdrops.length, models.length)
@@ -219,6 +221,9 @@ function UpgradeModal({
     setModels([])
     setPhase('preview')
     setResult(null)
+    setRouletteIdx(0)
+    setBgTransitionDur(0.12)
+    reelRef.current = []
 
     let cancelled = false
 
@@ -233,24 +238,26 @@ function UpgradeModal({
     return () => { cancelled = true; clearTimeout(fallback) }
   }, [isOpen, giftName])
 
-  // handleUpgrade — крутит рулетку 2.5с, выбирает победителя
+  // handleUpgrade — генерирует победителя ДО анимации, потом показывает рулетку
   const handleUpgrade = useCallback(async () => {
     if (!giftName || backdrops.length === 0 || models.length === 0) return
-    setPhase('upgrading')
 
-    const patternsPromise = fetchPatternsForGift(giftName)
-    await new Promise(r => setTimeout(r, 2500))
-
-    const patterns = await patternsPromise
+    // Генерируем результат сразу
+    const patterns = await fetchPatternsForGift(giftName)
     const winBackdrop = backdrops[Math.floor(Math.random() * backdrops.length)]
     const winModel = models[Math.floor(Math.random() * models.length)]
     const winPattern = patterns.length > 0
       ? patterns[Math.floor(Math.random() * patterns.length)]
       : { name: 'Standard', rarityPermille: 10 }
     const serialNumber = Math.floor(Math.random() * 9000) + 100
-
     const res: UpgradeResult = { giftName, model: winModel, backdrop: winBackdrop, pattern: winPattern, serialNumber }
+
+    // Запускаем фазу upgrading — reel и фоны теперь знают победителя
     setResult(res)
+    setPhase('upgrading')
+
+    // Ждём окончания анимации (3с) и переходим в result
+    await new Promise(r => setTimeout(r, 3000))
     setPhase('result')
     onUpgraded?.(res)
   }, [giftName, backdrops, models, onUpgraded])
@@ -262,24 +269,51 @@ function UpgradeModal({
     return () => clearInterval(timer)
   }, [isOpen, phase, total])
 
-  // Быстрый цикл фонов во время рулетки — меняет фон каждые 150мс
+  // Замедляющийся цикл фонов во время рулетки
   useEffect(() => {
     if (!isOpen || phase !== 'upgrading' || backdrops.length === 0) return
-    const timer = setInterval(() => {
+
+    let step = 0
+    const TOTAL_STEPS = 22
+    const DURATION = 3000
+    let elapsed = 0
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const tick = () => {
       setRouletteIdx(i => (i + 1) % backdrops.length)
-    }, 150)
-    return () => clearInterval(timer)
+      step++
+      if (step >= TOTAL_STEPS) return
+
+      const progress = step / TOTAL_STEPS
+      const delay = 80 + progress * progress * 520
+      // duration перехода фона = чуть меньше задержки, чтоб успевал
+      setBgTransitionDur(Math.min(delay * 0.85 / 1000, 0.5))
+      elapsed += delay
+      if (elapsed < DURATION) {
+        timeoutId = setTimeout(tick, delay)
+      }
+    }
+
+    setBgTransitionDur(0.07)
+    timeoutId = setTimeout(tick, 80)
+    return () => clearTimeout(timeoutId)
   }, [isOpen, phase, backdrops.length])
 
   const handleTgsReady = useCallback(() => { setAllReady(true) }, [])
 
-  // Текущие данные для отображения (в result берём выигравшие, в upgrading — быстро мигающие бэкдропы)
+  // Текущий бэкдроп:
+  // - preview: карусель по idx
+  // - upgrading: замедляющийся rouletteIdx, но последний шаг = бэкдроп победителя
+  // - result: бэкдроп победителя
+  const upgradeBackdrops = phase === 'upgrading' && result && backdrops.length > 0
+    ? [...backdrops.filter(b => b.name !== result.backdrop.name), result.backdrop]  // победитель последний
+    : backdrops
   const activeBackdrop = phase === 'result' && result
     ? result.backdrop
-    : phase === 'upgrading' && backdrops.length > 0
-      ? backdrops[rouletteIdx % backdrops.length]
+    : phase === 'upgrading' && upgradeBackdrops.length > 0
+      ? upgradeBackdrops[rouletteIdx % upgradeBackdrops.length]
       : backdrops[idx % Math.max(backdrops.length, 1)]
-  const activeModel    = phase === 'result' && result ? result.model    : models[idx % Math.max(models.length, 1)]
+  const activeModel = phase === 'result' && result ? result.model : models[idx % Math.max(models.length, 1)]
 
   const centerColor  = activeBackdrop?.hex?.centerColor  ?? '#363738'
   const edgeColor    = activeBackdrop?.hex?.edgeColor    ?? '#0e0f0f'
@@ -289,10 +323,19 @@ function UpgradeModal({
     ? `${CDN}/models/${encodeURIComponent(giftName)}/png/${encodeURIComponent(activeModel.name)}.png`
     : `${CDN}/models/Plush%20Pepe/png/Original.png`
 
-  // Список моделей для рулетки (28 штук, последний — победитель)
-  const rouletteModels = phase === 'upgrading' && result === null && models.length > 0
-    ? [...models, ...models, ...models].slice(0, 28)
-    : []
+  // Лента рулетки фиксируется один раз при начале upgrading
+  const SLOT_W = 180
+  const REEL_COUNT = 24
+
+  // Строим ленту один раз при переходе в upgrading
+  if (phase === 'upgrading' && result && reelRef.current.length === 0 && models.length > 0) {
+    const shuffled = [...models].sort(() => Math.random() - 0.5)
+    const filler: CdnModel[] = []
+    while (filler.length < REEL_COUNT - 1) filler.push(shuffled[filler.length % shuffled.length])
+    reelRef.current = [...filler, result.model]
+  }
+  if (phase !== 'upgrading') reelRef.current = []
+  const rouletteReel = reelRef.current
 
   return (
     <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={phase !== 'upgrading' ? onClose : undefined}>
@@ -314,7 +357,7 @@ function UpgradeModal({
               background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)`,
             }}
             transition={{
-              duration: phase === 'upgrading' ? 0.12 : CYCLE_MS / 1000 * 0.35,
+              duration: phase === 'upgrading' ? bgTransitionDur : CYCLE_MS / 1000 * 0.35,
               ease: 'easeInOut'
             }}
           >
@@ -354,16 +397,16 @@ function UpgradeModal({
             </div>
           )}
 
-          {/* UPGRADING — горизонтальная рулетка translateX -100% → 0 */}
-          {phase === 'upgrading' && giftName && (
+          {/* UPGRADING — рулетка, останавливается на победителе */}
+          {phase === 'upgrading' && giftName && rouletteReel.length > 0 && (
             <div className="upgrade-roulette-wrap">
               <motion.div
                 className="upgrade-roulette-reel"
-                initial={{ x: '-100%' }}
+                initial={{ x: -(REEL_COUNT - 1) * SLOT_W }}
                 animate={{ x: 0 }}
-                transition={{ duration: 2.5, ease: 'linear' }}
+                transition={{ duration: 3, ease: [0.25, 0.1, 0.1, 1.0] }}
               >
-                {rouletteModels.map((m, i) => (
+                {rouletteReel.map((m, i) => (
                   <div key={i} className="upgrade-roulette-item">
                     <GiftLottie giftName={giftName} modelName={m.name} className="upgrade-lottie" />
                   </div>
