@@ -127,41 +127,40 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-/* Fixed header card */
+/* ── Fixed header card ── */
 .profile-header-card {
   pointer-events: none;
   position: fixed;
-  inset-x: 0;
-  top: 0;
+  left: 0; right: 0; top: 0;
   z-index: 5;
   margin: 0 auto;
   max-width: 450px;
-  overflow: hidden;
   height: calc(var(--page-pt, 0px) + 259px);
+  overflow: hidden;
 }
 
 .profile-header-bg {
   position: absolute;
-  inset-x: 0;
-  top: 0;
+  left: 0; right: 0; top: 0;
   border-radius: 0 0 28px 28px;
   background-color: #1C1C1C;
-  will-change: transform;
+  height: 100%;
 }
 
-/* Avatar */
+/* Avatar — 48px from top of page content area */
 .profile-avatar-wrap {
   pointer-events: auto;
   position: absolute;
-  inset-x: 0;
+  left: 0; right: 0;
+  top: calc(var(--page-pt, 0px) + 48px);
   display: flex;
   justify-content: center;
-  transform-origin: center center;
 }
 .profile-avatar-btn {
   position: relative;
   border-radius: 50%;
   cursor: pointer;
+  outline: none;
 }
 .profile-avatar-glow {
   pointer-events: none;
@@ -179,43 +178,46 @@
   display: block;
 }
 
-/* Name */
+/* Name — 168px from top of page content area */
 .profile-name-wrap {
   pointer-events: auto;
   position: absolute;
-  inset-x: 0;
+  left: 0; right: 0;
+  top: calc(var(--page-pt, 0px) + 168px);
   padding: 0 16px;
-  transform-origin: center center;
+  display: flex;
+  justify-content: center;
 }
 .profile-name-btn {
   display: block;
-  width: 100%;
   text-align: center;
   font-size: 28px;
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 1.25;
   color: #fff;
   cursor: pointer;
+  max-width: 280px;
 }
 
-/* Status */
+/* Status row (badge + online) — 207px */
 .profile-status-wrap {
   pointer-events: auto;
   position: absolute;
-  inset-x: 0;
+  left: 0; right: 0;
+  top: calc(var(--page-pt, 0px) + 207px);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transform-origin: center center;
 }
-.profile-online { font-size: 14px; line-height: 1.2; color: #38a8ff; }
+.profile-online { font-size: 14px; line-height: 1.25; color: #38a8ff; }
 
 /* Top bar */
 .profile-topbar {
   pointer-events: auto;
   position: absolute;
-  inset-x: 0;
+  left: 0; right: 0;
+  top: var(--page-pt, 0px);
   display: flex;
   align-items: center;
   justify-content: space-between;
