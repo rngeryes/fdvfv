@@ -580,7 +580,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 1px;
   height: 30px;
   padding: 0 9px;
   border-radius: 100px;
@@ -590,7 +590,6 @@
   color: #FFC337;
   white-space: nowrap;
   overflow: hidden;
-  margin-top: auto;
 }
 
 .gift-price-sparks {
@@ -628,7 +627,16 @@
   gap: 3px;
 }
 
-.gift-price-star { display: inline-flex; align-items: center; }
+.gift-price-star {
+  display: inline-flex;
+  align-items: center;
+  transform: translateY(1.5px);
+}
+
+.gift-price-value {
+  position: relative;
+  z-index: 1;
+}
 
 /* ── Buy Page ── */
 .buy-root {
