@@ -239,14 +239,12 @@ function ProfilePage({
   onGifts: () => void
   onShowRating: () => void
 }) {
-  const PAGE_PT = 'var(--page-pt, 0px)'
-
   return (
     <div className="profile-root">
       {/* scrollable area */}
       <div className="profile-scroll no-scrollbar">
         {/* spacer for the fixed header card */}
-        <div style={{ height: `calc(${PAGE_PT} + 259px)` }} aria-hidden="true" />
+        <div style={{ height: 'calc(var(--page-pt, 0px) + 259px)' }} aria-hidden="true" />
 
         {/* content below header */}
         <div style={{ minHeight: '100dvh' }}>
@@ -278,37 +276,37 @@ function ProfilePage({
 
       {/* Fixed header card */}
       <div className="profile-header-card">
-        <div className="profile-header-bg" style={{ height: `calc(${PAGE_PT} + 259px)` }} />
+        <div className="profile-header-bg" />
 
-        {/* avatar */}
-        <div className="profile-avatar-wrap" style={{ top: `calc(${PAGE_PT} + 48px)` }}>
-          <button className="profile-avatar-btn" aria-label="Сменить аватар">
-            <div className="profile-avatar-glow" />
-            <img src={AVATAR} alt="Avatar" className="profile-avatar-img" />
-          </button>
-        </div>
-
-        {/* name */}
-        <div className="profile-name-wrap" style={{ top: `calc(${PAGE_PT} + 168px)` }}>
-          <button className="profile-name-btn">print('vrhud')</button>
-        </div>
-
-        {/* status + level */}
-        <div className="profile-status-wrap" style={{ top: `calc(${PAGE_PT} + 207px)` }}>
-          <button className="profile-level-btn" aria-label="Рейтинг" onClick={onShowRating}>
-            <LevelBadge />
-          </button>
-          <span className="profile-online">в сети</span>
-        </div>
-
-        {/* top bar */}
-        <div className="profile-topbar" style={{ top: PAGE_PT }}>
+        {/* top bar (settings button) */}
+        <div className="profile-topbar">
           <span />
           <div className="profile-topbar-right">
             <button className="profile-settings-btn" aria-label="Настройки">
               <IconSettings />
             </button>
           </div>
+        </div>
+
+        {/* avatar */}
+        <div className="profile-avatar-wrap">
+          <button className="profile-avatar-btn" aria-label="Сменить аватар">
+            <div className="profile-avatar-glow" />
+            <img src={AVATAR} alt="Avatar" className="profile-avatar-img" />
+          </button>
+        </div>
+
+        {/* display name */}
+        <div className="profile-name-wrap">
+          <button className="profile-name-btn">print('vrhud')</button>
+        </div>
+
+        {/* level badge + online status */}
+        <div className="profile-status-wrap">
+          <button className="profile-level-btn" aria-label="Рейтинг" onClick={onShowRating}>
+            <LevelBadge />
+          </button>
+          <span className="profile-online">в сети</span>
         </div>
       </div>
 
