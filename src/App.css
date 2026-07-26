@@ -84,7 +84,7 @@
 }
 
 .profile-info-card {
-  margin: calc(var(--page-pt, 0px) + 230px + 6px) 16px 0;
+  margin: calc(var(--page-pt, 0px) + 259px + 10px) 16px 0;
   border-radius: 10px;
   background: #1C1C1C;
   overflow: hidden;
@@ -132,7 +132,7 @@
   z-index: 5;
   margin: 0 auto;
   max-width: 450px;
-  height: calc(var(--page-pt, 0px) + 230px);
+  height: calc(var(--page-pt, 0px) + 259px);
   overflow: hidden;
 }
 
@@ -178,7 +178,7 @@
   pointer-events: auto;
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--page-pt, 0px) + 160px);
+  top: calc(var(--page-pt, 0px) + 168px);
   padding: 0 16px;
   display: flex;
   justify-content: center;
@@ -198,7 +198,7 @@
   pointer-events: auto;
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--page-pt, 0px) + 198px);
+  top: calc(var(--page-pt, 0px) + 207px);
   display: flex;
   align-items: center;
   justify-content: center;
