@@ -155,33 +155,46 @@ function GiftBackdrop({
 }
 
 // ─── Lottie Player wrapper (react-lottie-player) ──────────────────────────────
-function PepeLottie({ modelName, className }: { modelName: string; className?: string }) {
+function PepeLottie({
+  modelName,
+  visible,
+  className,
+}: {
+  modelName: string
+  visible: boolean
+  className?: string
+}) {
   const url = `${PEPE_CDN}/models/Plush%20Pepe/lottie/${encodeURIComponent(modelName)}.json`
   return (
-    <LottiePlayer
-      path={url}
-      play
-      loop
-      className={className}
-      style={{ width: '100%', height: '100%' }}
-      rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
-    />
+    <div
+      className="upgrade-lottie-slot"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
+      <LottiePlayer
+        path={url}
+        play
+        loop
+        className={className}
+        style={{ width: '100%', height: '100%' }}
+        rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
+      />
+    </div>
   )
 }
 
 // ─── Upgrade Modal ────────────────────────────────────────────────────────────
 function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [idx, setIdx] = useState(0)
+  const total = Math.min(PEPE_BACKDROPS.length, PEPE_MODELS.length)
 
   // Cycle every 3 seconds
   useEffect(() => {
     if (!isOpen) return
-    const total = Math.min(PEPE_BACKDROPS.length, PEPE_MODELS.length)
     const timer = setInterval(() => {
       setIdx(i => (i + 1) % total)
     }, 3000)
     return () => clearInterval(timer)
-  }, [isOpen])
+  }, [isOpen, total])
 
   // Reset on open
   useEffect(() => {
@@ -190,7 +203,6 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
   const backdrop = PEPE_BACKDROPS[idx % PEPE_BACKDROPS.length]
   const modelName = PEPE_MODELS[idx % PEPE_MODELS.length]
-  const uid = `upgrade-${idx}`
 
   return (
     <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
@@ -205,18 +217,32 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <IconClose />
           </button>
 
-          {/* Animated backdrop + pattern */}
-          <GiftBackdrop
-            key={uid}
-            centerColor={backdrop.centerColor}
-            edgeColor={backdrop.edgeColor}
-            patternColor={backdrop.patternColor}
-            uid={uid}
-          />
+          {/* All backdrops stacked, active one fades in */}
+          {PEPE_BACKDROPS.slice(0, total).map((bd, i) => (
+            <div
+              key={i}
+              className="upgrade-backdrop-layer"
+              style={{ opacity: i === idx ? 1 : 0 }}
+            >
+              <GiftBackdrop
+                centerColor={bd.centerColor}
+                edgeColor={bd.edgeColor}
+                patternColor={bd.patternColor}
+                uid={`upgrade-${i}`}
+              />
+            </div>
+          ))}
 
-          {/* Lottie model */}
+          {/* All Lottie models preloaded, active one fades in */}
           <div className="upgrade-lottie-wrap">
-            <PepeLottie key={modelName} modelName={modelName} className="upgrade-lottie" />
+            {PEPE_MODELS.slice(0, total).map((name, i) => (
+              <PepeLottie
+                key={name}
+                modelName={name}
+                visible={i === idx}
+                className="upgrade-lottie"
+              />
+            ))}
           </div>
 
           {/* Backdrop name badge */}
