@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
 import './App.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -153,48 +154,19 @@ function GiftBackdrop({
   )
 }
 
-// ─── Lottie Player Component ──────────────────────────────────────────────────
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    lottie: any
-  }
-}
-
-function LottiePlayer({ modelName, className }: { modelName: string; className?: string }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const animRef = useRef<any>(null)
-
-  useEffect(() => {
-    if (!containerRef.current) return
-    if (!window.lottie) return
-
-    // Destroy previous
-    if (animRef.current) {
-      animRef.current.destroy()
-      animRef.current = null
-    }
-
-    const url = `${PEPE_CDN}/models/Plush%20Pepe/lottie/${encodeURIComponent(modelName)}.json`
-
-    animRef.current = window.lottie.loadAnimation({
-      container: containerRef.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: url,
-    })
-
-    return () => {
-      if (animRef.current) {
-        animRef.current.destroy()
-        animRef.current = null
-      }
-    }
-  }, [modelName])
-
-  return <div ref={containerRef} className={className} />
+// ─── Lottie Player wrapper (react-lottie-player) ──────────────────────────────
+function PepeLottie({ modelName, className }: { modelName: string; className?: string }) {
+  const url = `${PEPE_CDN}/models/Plush%20Pepe/lottie/${encodeURIComponent(modelName)}.json`
+  return (
+    <LottiePlayer
+      path={url}
+      play
+      loop
+      className={className}
+      style={{ width: '100%', height: '100%' }}
+      rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
+    />
+  )
 }
 
 // ─── Upgrade Modal ────────────────────────────────────────────────────────────
@@ -244,7 +216,7 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
           {/* Lottie model */}
           <div className="upgrade-lottie-wrap">
-            <LottiePlayer key={modelName} modelName={modelName} className="upgrade-lottie" />
+            <PepeLottie key={modelName} modelName={modelName} className="upgrade-lottie" />
           </div>
 
           {/* Backdrop name badge */}
