@@ -784,11 +784,11 @@ function ProfilePage({
             <div className="profile-info-inner">
               <button
                 className="profile-row"
-                onClick={() => navigator.clipboard?.writeText('@treeze8')}
+                onClick={() => navigator.clipboard?.writeText('@test')}
               >
                 <div className="profile-row-content">
                   <div className="profile-row-label">имя пользователя</div>
-                  <div className="profile-row-value link">@treeze8</div>
+                  <div className="profile-row-value link">@test</div>
                 </div>
                 <IconCopy />
               </button>
@@ -851,7 +851,7 @@ function ProfilePage({
         </div>
 
         <div className="profile-name-wrap">
-          <button className="profile-name-btn">print('vrhud')</button>
+          <button className="profile-name-btn">username</button>
         </div>
 
         <div className="profile-status-wrap">
