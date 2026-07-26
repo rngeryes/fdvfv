@@ -261,7 +261,7 @@ function ProfilePage({
       {/* scrollable area */}
       <div className="profile-scroll no-scrollbar">
         {/* spacer for the fixed header card */}
-        <div style={{ height: 'calc(var(--page-pt, 0px) + 60px)' }} aria-hidden="true" />
+        <div style={{ height: 'calc(var(--page-pt, 0px) + 5px)' }} aria-hidden="true" />
 
         {/* content below header */}
         <div style={{ minHeight: '100dvh' }}>
