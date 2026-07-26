@@ -1062,6 +1062,15 @@
   text-align: center;
 }
 
+.upgrade-backdrop-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transition: opacity 0.8s ease;
+  overflow: hidden;
+}
+
 .upgrade-backdrop {
   pointer-events: none;
   position: absolute;
@@ -1081,10 +1090,15 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -55%);
-  width: 220px;
-  height: 220px;
+  width: 110px;
+  height: 110px;
   z-index: 2;
   pointer-events: none;
+}
+.upgrade-lottie-slot {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.8s ease;
 }
 .upgrade-lottie {
   width: 100%;
