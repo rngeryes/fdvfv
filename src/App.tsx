@@ -177,9 +177,13 @@ function BottomNav({
 }
 
 // ─── Rating Modal ─────────────────────────────────────────────────────────────
-function RatingModal({ onClose }: { onClose: () => void }) {
+// ─── Rating Modal ─────────────────────────────────────────────────────────────
+function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className={`modal-overlay${isOpen ? ' open' : ''}`} 
+      onClick={onClose}
+    >
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         {/* header */}
         <div className="modal-header">
@@ -536,7 +540,7 @@ export default function App() {
       {page === 'buy' && selectedGift && (
         <BuyPage gift={selectedGift} onBack={goGifts} />
       )}
-      {showRating && <RatingModal onClose={() => setShowRating(false)} />}
+      <RatingModal isOpen={showRating} onClose={() => setShowRating(false)} />
     </div>
   )
 }
