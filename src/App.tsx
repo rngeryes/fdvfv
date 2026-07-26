@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
+import { motion, AnimatePresence } from 'framer-motion'
 import './App.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -157,12 +158,10 @@ function GiftBackdrop({
 // ─── Lottie Player wrapper (react-lottie-player) ──────────────────────────────
 function PepeLottie({
   modelName,
-  visible,
   onReady,
   className,
 }: {
   modelName: string
-  visible: boolean
   onReady?: () => void
   className?: string
 }) {
@@ -177,32 +176,28 @@ function PepeLottie({
   }, [onReady])
 
   return (
-    <div
-      className="upgrade-lottie-slot"
-      style={{ opacity: visible ? 1 : 0 }}
-    >
-      <LottiePlayer
-        path={url}
-        play
-        loop
-        className={className}
-        style={{ width: '100%', height: '100%' }}
-        rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
-        onLoad={handleLoad}
-      />
-    </div>
+    <LottiePlayer
+      path={url}
+      play
+      loop
+      className={className}
+      style={{ width: '100%', height: '100%' }}
+      rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
+      onLoad={handleLoad}
+    />
   )
 }
 
 // ─── Upgrade Modal ────────────────────────────────────────────────────────────
+const CYCLE_MS = 3500
+
 function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [idx, setIdx] = useState(0)
   const [allReady, setAllReady] = useState(false)
   const total = Math.min(PEPE_BACKDROPS.length, PEPE_MODELS.length)
-  // track how many TGS have loaded
   const loadedCount = useRef(0)
 
-  // Reset state on open/close
+  // Reset on open
   useEffect(() => {
     if (isOpen) {
       setIdx(0)
@@ -211,20 +206,16 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     }
   }, [isOpen])
 
-  // Cycle every 3 seconds
+  // Cycle every CYCLE_MS
   useEffect(() => {
     if (!isOpen) return
-    const timer = setInterval(() => {
-      setIdx(i => (i + 1) % total)
-    }, 3000)
+    const timer = setInterval(() => setIdx(i => (i + 1) % total), CYCLE_MS)
     return () => clearInterval(timer)
   }, [isOpen, total])
 
   const handleTgsReady = useCallback(() => {
     loadedCount.current += 1
-    if (loadedCount.current >= total) {
-      setAllReady(true)
-    }
+    if (loadedCount.current >= total) setAllReady(true)
   }, [total])
 
   const backdrop = PEPE_BACKDROPS[idx % PEPE_BACKDROPS.length]
@@ -233,7 +224,6 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   return (
     <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
       <div className="modal-sheet upgrade-modal-sheet" onClick={e => e.stopPropagation()}>
-        {/* Header with animated backdrop */}
         <div className="upgrade-header">
           <button
             className="modal-close-btn"
@@ -243,40 +233,80 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <IconClose />
           </button>
 
-          {/* All backdrops — always rendered, active one fades in (always smooth) */}
-          {PEPE_BACKDROPS.slice(0, total).map((bd, i) => (
-            <div
-              key={i}
-              className="upgrade-backdrop-layer"
-              style={{ opacity: i === idx ? 1 : 0 }}
+          {/* Фон — плавно меняет цвет через framer-motion animate */}
+          <motion.div
+            className="upgrade-backdrop"
+            animate={{
+              background: `radial-gradient(50% 65% at 50% 35%, ${backdrop.centerColor} 0%, ${backdrop.edgeColor} 100%)`,
+            }}
+            transition={{ duration: CYCLE_MS / 1000 * 0.35, ease: 'easeInOut' }}
+          >
+            <svg
+              width="100%" height="100%"
+              viewBox="0 0 416 416"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              preserveAspectRatio="xMidYMid slice"
             >
-              <GiftBackdrop
-                centerColor={bd.centerColor}
-                edgeColor={bd.edgeColor}
-                patternColor={bd.patternColor}
-                uid={`upgrade-${i}`}
-              />
-            </div>
-          ))}
+              <defs>
+                <filter id="upflt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+                  <feFlood floodColor={backdrop.patternColor} />
+                  <feComposite in2="SourceGraphic" operator="in" />
+                </filter>
+                <image id="uppat" x="-50" y="-50" width="100" height="100"
+                  href="https://cdn.changes.tg/gifts/models/Plush%20Pepe/png/Original.png"
+                  crossOrigin="anonymous"
+                />
+                <g id="upgrp">
+                  {PEPE_PATTERN_TRANSFORMS.map((t, i) => (
+                    <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                      <use href="#uppat" />
+                    </g>
+                  ))}
+                </g>
+              </defs>
+              <use href="#upgrp" filter="url(#upflt)" />
+            </svg>
+          </motion.div>
 
-          {/* All TGS preloaded silently; shown (with smooth per-slot fade) only after all ready */}
+          {/* Все TGS грузятся скрытно; появляются когда все загружены */}
           <div
             className="upgrade-lottie-wrap"
-            style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.6s ease' }}
+            style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
           >
             {PEPE_MODELS.slice(0, total).map((name, i) => (
-              <PepeLottie
+              <motion.div
                 key={name}
-                modelName={name}
-                visible={i === idx}
-                onReady={handleTgsReady}
-                className="upgrade-lottie"
-              />
+                className="upgrade-lottie-slot"
+                animate={{ opacity: i === idx ? [0, 1, 1, 0] : 0 }}
+                transition={
+                  i === idx
+                    ? { duration: CYCLE_MS / 1000, ease: 'linear', times: [0, 0.1, 0.9, 1] }
+                    : { duration: 0 }
+                }
+              >
+                <PepeLottie
+                  modelName={name}
+                  onReady={handleTgsReady}
+                  className="upgrade-lottie"
+                />
+              </motion.div>
             ))}
           </div>
 
-          {/* Backdrop name badge — fades in on each change via key remount */}
-          <div key={modelName} className="upgrade-model-badge">{modelName}</div>
+          {/* Бейдж — плавно появляется при смене */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={modelName}
+              className="upgrade-model-badge"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              {modelName}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Title */}
