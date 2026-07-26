@@ -729,7 +729,7 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         </div>
 
         <p className="rating-desc">
-          Рейтинг отражает вашу активность в Virus Game. На него влияют:
+          Рейтинг отражает вашу активность в нашем мини-аппе. На него влияют:
         </p>
 
         <div className="rating-factors">
