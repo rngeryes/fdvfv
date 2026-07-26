@@ -93,12 +93,39 @@ function IconStar({ size = 15 }: { size?: number }) {
 function LevelBadge({ color = '#2EA6FF' }: { color?: string }) {
   return (
     <span className="level-badge-wrap">
-      <svg width="72px" height="72px" viewBox="0 0 72 72" className="badge-outer" style={{ color: 'transparent' }}>
-        <path d="M48.5,13 C53.8,13 58.1,17.1 58.5,22.3 C59.2,32.6 58.7,40.6 56.8,46.3 C54.3,53.8 42,62.1 36,62 C30.2,61.9 17.5,53.1 15.2,46.3 C13.3,40.6 12.8,32.6 13.5,22.3 C13.9,17.1 18.2,13 23.5,13 Z" fill="currentColor"/>
-      </svg>
-      <svg width="72px" height="72px" viewBox="0 0 72 72" className="badge-inner" style={{ color }}>
-        <path d="M53,45 C54.7,39.9 55.2,32.4 54.5,22.6 C54.3,19.4 51.7,17 48.5,17 L23.5,17 C20.3,17 17.7,19.4 17.5,22.6 C16.8,32.4 17.3,39.9 19,45 C21,51 32.8,58 36,58 C39.2,58 50.7,51.9 53,45 Z" fill="currentColor"/>
-      </svg>
+      <span className="level-badge-inner-wrap">
+        {/* outer shield — transparent background layer */}
+        <svg
+          width="72px" height="72px" viewBox="0 0 72 72"
+          className="badge-outer"
+          style={{ color: 'transparent' }}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <title>Badge / level1_outer</title>
+          <g stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
+            <path
+              d="M48.5123886,13 C53.7585594,13.0015192 58.1116928,17.0569317 58.4845708,22.2918105 C59.216306,32.6367133 58.6862484,40.5903656 56.7947332,46.2649111 C54.2690969,53.8418199 42.0021357,62.1042926 35.9486315,61.9990662 C30.1753042,61.89871 17.4910652,53.1223062 15.2052668,46.2649111 C13.3137516,40.5903656 12.783694,32.6367133 13.5155689,22.2898424 C13.8883072,17.0569317 18.2414406,13.0015192 23.4887695,13 L48.5123886,13 Z"
+              fill="currentColor"
+            />
+          </g>
+        </svg>
+        {/* inner shield — coloured fill */}
+        <svg
+          width="72px" height="72px" viewBox="0 0 72 72"
+          className="badge-inner"
+          style={{ color }}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <title>Badge / level1_inner</title>
+          <g stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
+            <path
+              d="M53,45 C54.6943359,39.9169922 55.1925159,32.4416725 54.49454,22.5740409 C54.2708931,19.4342396 51.6589867,17.0009114 48.5112305,17 L23.4887695,17 C20.3410133,17.0009114 17.7291069,19.4342396 17.50546,22.5740409 C16.8074841,32.4416725 17.3056641,39.9169922 19,45 C20.9999787,50.9999361 32.8055802,57.9438271 36.0181519,58.0000467 C39.2307237,58.0555136 50.70353,51.8894101 53,45 Z"
+              fill="currentColor"
+            />
+          </g>
+        </svg>
+      </span>
+      {/* number */}
       <span className="badge-num">1</span>
     </span>
   )
@@ -460,7 +487,7 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
           <button className="buy-qty-btn" onClick={() => setQty(q => q + 1)}>+</button>
         </div>
         <button className="buy-confirm-btn">
-          Купить подарок за&nbsp;<IconStar size={19} /><span>&nbsp;{total.toLocaleString('ru')}</span>
+          Купить за&nbsp;<IconStar size={19} /><span>&nbsp;{total.toLocaleString('ru')}</span>
         </button>
       </div>
 
