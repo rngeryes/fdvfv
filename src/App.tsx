@@ -55,10 +55,10 @@ const CDN = 'https://cdn.changes.tg/gifts'
 const GIFT_CDN_NAME: Record<number, string> = {
   1:  'Plush Pepe',
   2:  'Desk Calendar',
-  3:  'Chill Flame',
+  3:  'Genie Lamp',
   4:  'Heart Locket',
-  5:  'Moon Pendant',
-  6:  'Crystal Ball',
+  5:  'Lol Pop',
+  6:  'Astral Shard',
   7:  'Voodoo Doll',
   8:  'Vice Cream',
   9:  "Durov's Cap",
@@ -174,7 +174,7 @@ function UpgradeModal({
   const [allReady, setAllReady] = useState(false)
   const [backdrops, setBackdrops] = useState<CdnBackdrop[]>([])
   const [models, setModels] = useState<CdnModel[]>([])
-  const loadedCount = useRef(0)
+  const loadedCount = useRef(0) // unused but kept for compat
 
   const giftName = giftId ? GIFT_CDN_NAME[giftId] ?? null : null
   const total = Math.min(backdrops.length, models.length)
@@ -216,9 +216,8 @@ function UpgradeModal({
   }, [isOpen, total])
 
   const handleTgsReady = useCallback(() => {
-    loadedCount.current += 1
-    if (loadedCount.current >= models.length) setAllReady(true)
-  }, [models.length])
+    setAllReady(true)
+  }, [])
 
   const backdrop = backdrops[idx % Math.max(backdrops.length, 1)]
   const model = models[idx % Math.max(models.length, 1)]
@@ -278,27 +277,33 @@ function UpgradeModal({
             </svg>
           </motion.div>
 
-          {/* Все TGS грузятся скрытно; появляются когда все загружены */}
+          {/* Только текущий + следующий TGS в DOM; остальные не рендерятся */}
           {giftName && models.length > 0 && (
             <div
               className="upgrade-lottie-wrap"
               style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
             >
-              {models.map((m, i) => (
-                <motion.div
-                  key={m.name}
-                  className="upgrade-lottie-slot"
-                  animate={{ opacity: i === idx ? 1 : 0 }}
-                  transition={{ duration: 0.5, ease: 'easeInOut' }}
-                >
-                  <GiftLottie
-                    giftName={giftName}
-                    modelName={m.name}
-                    onReady={handleTgsReady}
-                    className="upgrade-lottie"
-                  />
-                </motion.div>
-              ))}
+              {models.map((m, i) => {
+                const nextIdx = (idx + 1) % models.length
+                const isActive = i === idx
+                const isNext = i === nextIdx
+                if (!isActive && !isNext) return null
+                return (
+                  <motion.div
+                    key={m.name}
+                    className="upgrade-lottie-slot"
+                    animate={{ opacity: isActive ? 1 : 0 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                  >
+                    <GiftLottie
+                      giftName={giftName}
+                      modelName={m.name}
+                      onReady={isActive ? handleTgsReady : undefined}
+                      className="upgrade-lottie"
+                    />
+                  </motion.div>
+                )
+              })}
             </div>
           )}
 
