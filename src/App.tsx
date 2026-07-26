@@ -94,7 +94,6 @@ function LevelBadge({ color = '#2EA6FF' }: { color?: string }) {
   return (
     <span className="level-badge-wrap">
       <span className="level-badge-inner-wrap">
-        {/* outer shield — transparent background layer */}
         <svg
           width="72px" height="72px" viewBox="0 0 72 72"
           className="badge-outer"
@@ -109,7 +108,6 @@ function LevelBadge({ color = '#2EA6FF' }: { color?: string }) {
             />
           </g>
         </svg>
-        {/* inner shield — coloured fill */}
         <svg
           width="72px" height="72px" viewBox="0 0 72 72"
           className="badge-inner"
@@ -125,8 +123,50 @@ function LevelBadge({ color = '#2EA6FF' }: { color?: string }) {
           </g>
         </svg>
       </span>
-      {/* number */}
       <span className="badge-num">1</span>
+    </span>
+  )
+}
+
+// ─── Sparks for price ────────────────────────────────────────────────────────
+function PriceSparks() {
+  const sparks = [
+    { left: '26.922%', bottom: '56.899%', width: '1.5632px', height: '1.5632px', delay: '1.12414s', dx: '-3.794276486690631px', dy: '-6.256526037605882px', dur: '1.797246836738998s' },
+    { left: '42.230%', bottom: '16.183%', width: '2.15898px', height: '2.15898px', delay: '1.03965s', dx: '1.386141329589334px', dy: '5.8782074872611005px', dur: '1.964935769606515s' },
+    { left: '77.731%', bottom: '43.105%', width: '2.83152px', height: '2.83152px', delay: '0.561425s', dx: '-6.401747480315603px', dy: '-1.6989289440757158px', dur: '1.8108700606005192s' },
+    { left: '53.672%', bottom: '6.149%', width: '3.282px', height: '3.282px', delay: '0.747962s', dx: '-0.9834924297768857px', dy: '3.8341002236702444px', dur: '1.8406268786096724s' },
+    { left: '40.360%', bottom: '26.836%', width: '2.30464px', height: '2.30464px', delay: '0.5306s', dx: '-1.05170215349456px', dy: '-9.545259211061206px', dur: '2.3351166406377972s' },
+    { left: '54.077%', bottom: '93.277%', width: '2.12625px', height: '2.12625px', delay: '1.71103s', dx: '3.805128257074777px', dy: '0.7923020777918062px', dur: '2.322280158115328s' },
+    { left: '8.287%', bottom: '74.023%', width: '3.08611px', height: '3.08611px', delay: '0.588791s', dx: '-6.6174329272575605px', dy: '-7.963559036964675px', dur: '2.0726108008700765s' },
+    { left: '23.229%', bottom: '18.032%', width: '2.44945px', height: '2.44945px', delay: '1.26055s', dx: '-1.7702253155138366px', dy: '0.9650929457094204px', dur: '2.1927166879211843s' },
+    { left: '51.777%', bottom: '84.139%', width: '1.50286px', height: '1.50286px', delay: '0.824498s', dx: '-0.9969911957303177px', dy: '-10.339409399010224px', dur: '1.7157001047144143s' },
+    { left: '79.133%', bottom: '21.299%', width: '3.33327px', height: '3.33327px', delay: '0.907053s', dx: '-1.6397338029339132px', dy: '0.9362333792192796px', dur: '1.9731691991321765s' },
+    { left: '76.115%', bottom: '72.496%', width: '2.94773px', height: '2.94773px', delay: '1.18866s', dx: '1.9337058972330583px', dy: '-10.208509354450912px', dur: '1.969552063232509s' },
+    { left: '32.867%', bottom: '8.937%', width: '3.28123px', height: '3.28123px', delay: '0.827014s', dx: '-6.09200588522447px', dy: '-6.212815708774111px', dur: '2.0019379916693705s' },
+    { left: '20.315%', bottom: '10.024%', width: '1.55546px', height: '1.55546px', delay: '0.289842s', dx: '-1.023665081593255px', dy: '-0.6524529224794868px', dur: '2.1725890349246346s' },
+    { left: '83.333%', bottom: '19.748%', width: '3.47677px', height: '3.47677px', delay: '1.52019s', dx: '-3.1413580991500165px', dy: '-1.710478397446396px', dur: '1.750348696379623s' },
+    { left: '23.193%', bottom: '73.209%', width: '3.02355px', height: '3.02355px', delay: '0.288341s', dx: '-6.843523533832396px', dy: '-0.6559240270789424px', dur: '2.235724298160098s' },
+    { left: '65.501%', bottom: '33.518%', width: '2.69469px', height: '2.69469px', delay: '0.0639482s', dx: '4.48498120380986px', dy: '-11.288142005419157px', dur: '2.375337089224828s' },
+  ]
+
+  return (
+    <span className="gift-price-sparks">
+      {sparks.map((s, i) => (
+        <span
+          key={i}
+          className="vg-spark"
+          style={{
+            left: s.left,
+            bottom: s.bottom,
+            width: s.width,
+            height: s.height,
+            animationDelay: s.delay,
+            '--dx': s.dx,
+            '--dy': s.dy,
+            '--dur': s.dur,
+          } as React.CSSProperties}
+        />
+      ))}
     </span>
   )
 }
@@ -145,7 +185,6 @@ function BottomNav({
 }) {
   return (
     <div className="bottom-nav">
-      {/* spacer for the avatar bump */}
       <div className="bnav-spacer" />
       <button
         className={`bnav-item${page === 'gifts' ? ' active' : ''}`}
@@ -163,7 +202,6 @@ function BottomNav({
         <IconGift />
         <span>Подарки</span>
       </button>
-      {/* centre avatar button */}
       <button
         className="bnav-avatar-btn"
         onClick={onProfile}
@@ -177,7 +215,6 @@ function BottomNav({
 }
 
 // ─── Rating Modal ─────────────────────────────────────────────────────────────
-// ─── Rating Modal ─────────────────────────────────────────────────────────────
 function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   return (
     <div 
@@ -185,16 +222,13 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       onClick={onClose}
     >
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-        {/* header */}
         <div className="modal-header">
           <button className="modal-close-btn" onClick={onClose}><IconClose /></button>
           <span className="modal-title">Рейтинг</span>
         </div>
 
-        {/* progress bar section */}
         <div className="rating-progress-wrap">
           <div className="rating-bubble">
-            {/* корона — точная копия из оригинала, transform переворачивает её правильно */}
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none">
               <g transform="translate(0,30) scale(1,-1)">
                 <path
@@ -219,7 +253,6 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
           Рейтинг отражает вашу активность в Virus Game. На него влияют:
         </p>
 
-        {/* factors */}
         <div className="rating-factors">
           <div className="rating-factor">
             <span className="rating-factor-label plus">ПЛЮС</span>
@@ -262,17 +295,12 @@ function ProfilePage({
 }) {
   return (
     <div className="profile-root">
-      {/* scrollable area */}
       <div className="profile-scroll no-scrollbar">
-        {/* spacer for the fixed header card */}
-        <div style={{ height: 'calc(var(--page-pt, 0px) + 5px)' }} aria-hidden="true" />
+        <div style={{ height: 'calc(var(--page-pt, 0px) + 230px)' }} aria-hidden="true" />
 
-        {/* content below header */}
         <div style={{ minHeight: '100dvh' }}>
-          {/* user info block */}
           <div className="profile-info-card">
             <div className="profile-info-inner">
-              {/* username row */}
               <button
                 className="profile-row"
                 onClick={() => navigator.clipboard?.writeText('@treeze8')}
@@ -283,7 +311,6 @@ function ProfilePage({
                 </div>
                 <IconCopy />
               </button>
-              {/* bio row */}
               <div className="profile-row-static">
                 <div className="profile-row-label">био</div>
                 <button className="profile-row-value muted">Добавьте описание</button>
@@ -291,18 +318,15 @@ function ProfilePage({
             </div>
           </div>
 
-          {/* gifts grid (empty) */}
           <div className="profile-gifts-area">
             <div className="profile-gifts-grid" />
           </div>
         </div>
       </div>
 
-      {/* Fixed header card */}
       <div className="profile-header-card">
         <div className="profile-header-bg" />
 
-        {/* top bar (settings button) */}
         <div className="profile-topbar">
           <span />
           <div className="profile-topbar-right">
@@ -312,7 +336,6 @@ function ProfilePage({
           </div>
         </div>
 
-        {/* avatar */}
         <div className="profile-avatar-wrap">
           <button className="profile-avatar-btn" aria-label="Сменить аватар">
             <div className="profile-avatar-glow" />
@@ -320,12 +343,10 @@ function ProfilePage({
           </button>
         </div>
 
-        {/* display name */}
         <div className="profile-name-wrap">
           <button className="profile-name-btn">print('vrhud')</button>
         </div>
 
-        {/* level badge + online status */}
         <div className="profile-status-wrap">
           <button className="profile-level-btn" aria-label="Рейтинг" onClick={onShowRating}>
             <LevelBadge />
@@ -334,7 +355,6 @@ function ProfilePage({
         </div>
       </div>
 
-      {/* Bottom nav */}
       <BottomNav page="profile" onGifts={onGifts} onProfile={() => {}} avatarSrc={AVATAR} />
     </div>
   )
@@ -345,12 +365,14 @@ function GiftCard({ gift, onClick }: { gift: Gift; onClick: () => void }) {
   return (
     <button className="gift-card" onClick={onClick} style={{ animationDelay: `${gift.id * 0.035}s` }}>
       <div className="gift-card-img">
-        {/* placeholder coloured square since we have no real lottie */}
         <div className="gift-card-placeholder" />
       </div>
-      <div className="gift-card-price">
-        <span className="gift-price-star"><IconStar size={13} /></span>
-        <span>{gift.stars.toLocaleString('ru')}</span>
+      <div className="gift-price-wrap">
+        <PriceSparks />
+        <span className="gift-price-content">
+          <span className="gift-price-star"><IconStar size={13} /></span>
+          <span>{gift.stars.toLocaleString('ru')}</span>
+        </span>
       </div>
     </button>
   )
@@ -366,10 +388,8 @@ function GiftsPage({
 }) {
   return (
     <div className="gifts-root">
-      {/* glow bg */}
       <div className="gifts-glow-bg" aria-hidden="true" />
 
-      {/* top bar */}
       <div className="gifts-topbar">
         <div className="gifts-topbar-inner">
           <button className="gifts-back-btn" aria-label="Выйти в меню" onClick={onBack}>
@@ -378,9 +398,7 @@ function GiftsPage({
         </div>
       </div>
 
-      {/* scrollable content */}
       <div className="gifts-scroll no-scrollbar">
-        {/* user header */}
         <div className="gifts-user-header">
           <div className="gifts-avatar-wrap">
             <img src={AVATAR} alt="Avatar" className="gifts-avatar" />
@@ -392,7 +410,6 @@ function GiftsPage({
           </p>
         </div>
 
-        {/* grid */}
         <div className="gifts-grid">
           {GIFTS.map(g => (
             <GiftCard key={g.id} gift={g} onClick={() => onBuy(g)} />
@@ -400,7 +417,6 @@ function GiftsPage({
         </div>
       </div>
 
-      {/* Bottom nav */}
       <BottomNav page="gifts" onGifts={() => {}} onProfile={onBack} avatarSrc={AVATAR} />
     </div>
   )
@@ -416,7 +432,6 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
 
   return (
     <div className="buy-root">
-      {/* pattern bg */}
       <div className="buy-pattern-bg" aria-hidden="true">
         <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" className="buy-pattern-svg">
           {Array.from({ length: 8 }).map((_, row) =>
@@ -429,14 +444,11 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
         </svg>
       </div>
 
-      {/* back pill */}
       <div className="buy-topbar">
         <button className="buy-back-btn" onClick={onBack}><IconChevronLeft /></button>
       </div>
 
-      {/* scrollable */}
       <div className="buy-scroll no-scrollbar">
-        {/* card */}
         <div className="buy-card-wrap">
           <div className="buy-card">
             <div className="buy-card-inner">
@@ -453,7 +465,6 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
               <div className="buy-card-ribbon-inner">101 из 3&nbsp;000</div>
             </div>
           </div>
-          {/* message input */}
           <div className="buy-msg-wrap">
             <input
               className="buy-msg-input"
@@ -464,7 +475,6 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
           </div>
         </div>
 
-        {/* hide name toggle */}
         <div className="buy-toggle-card">
           <div
             className="buy-toggle-row"
@@ -487,7 +497,6 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
         </div>
         <p className="buy-toggle-hint">Скрыть моё имя и сообщение от посетителей профиля.</p>
 
-        {/* availability bar */}
         <div className="buy-avail-bar-wrap">
           <div className="buy-avail-bar">
             <div className="buy-avail-fill" style={{ width: '96.7%' }} />
@@ -497,11 +506,9 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
         </div>
         <p className="buy-avail-hint">Когда все подарки будут проданы, вы больше не сможете их купить.</p>
 
-        {/* bottom spacer */}
         <div style={{ height: 160 }} />
       </div>
 
-      {/* fixed buy bar */}
       <div className="buy-action-bar">
         <div className="buy-qty-control">
           <button className="buy-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}>−</button>
@@ -513,7 +520,6 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
         </button>
       </div>
 
-      {/* bottom nav */}
       <BottomNav page="gifts" onGifts={onBack} onProfile={onBack} avatarSrc={AVATAR} />
     </div>
   )
