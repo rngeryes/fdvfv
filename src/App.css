@@ -46,13 +46,10 @@
   padding: 6px 0;
   font-size: 10px;
   font-weight: 500;
-  /* По умолчанию серый, hover — белый, active — синий */
   color: #7b7b7b;
-  /* убираем transition чтобы цвет менялся мгновенно */
   cursor: pointer;
 }
 .bnav-item.active { color: #0C8AFF !important; }
-/* hover только если не активная вкладка */
 .bnav-item:not(.active):hover { color: #f5f5f5; }
 
 .bnav-avatar-btn {
@@ -81,16 +78,13 @@
   overflow: hidden;
 }
 
-/* профиль НЕ скроллится — overflow: hidden */
 .profile-scroll {
   height: 100%;
   overflow: hidden;
 }
 
-/* Info card — отступ сверху чтобы не прилипала к шапке */
 .profile-info-card {
-  /* отступ сверху = высота шапки + 10px зазор */
-  margin: calc(var(--page-pt, 0px) + 259px + 10px) 16px 0;
+  margin: calc(var(--page-pt, 0px) + 230px + 6px) 16px 0;
   border-radius: 10px;
   background: #1C1C1C;
   overflow: hidden;
@@ -138,7 +132,7 @@
   z-index: 5;
   margin: 0 auto;
   max-width: 450px;
-  height: calc(var(--page-pt, 0px) + 259px);
+  height: calc(var(--page-pt, 0px) + 230px);
   overflow: hidden;
 }
 
@@ -150,7 +144,6 @@
   height: 100%;
 }
 
-/* Avatar — 48px from top of page content area */
 .profile-avatar-wrap {
   pointer-events: auto;
   position: absolute;
@@ -181,12 +174,11 @@
   display: block;
 }
 
-/* Name — 168px from top of page content area */
 .profile-name-wrap {
   pointer-events: auto;
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--page-pt, 0px) + 168px);
+  top: calc(var(--page-pt, 0px) + 160px);
   padding: 0 16px;
   display: flex;
   justify-content: center;
@@ -202,12 +194,11 @@
   max-width: 280px;
 }
 
-/* Status row (badge + online) — 207px */
 .profile-status-wrap {
   pointer-events: auto;
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--page-pt, 0px) + 207px);
+  top: calc(var(--page-pt, 0px) + 198px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -215,7 +206,6 @@
 }
 .profile-online { font-size: 14px; line-height: 1.25; color: #38a8ff; }
 
-/* Top bar */
 .profile-topbar {
   pointer-events: auto;
   position: absolute;
@@ -345,7 +335,6 @@
   cursor: pointer;
 }
 
-/* Rating progress */
 .rating-progress-wrap {
   position: relative;
   padding-top: 66px;
@@ -367,7 +356,7 @@
 .rating-bubble-max { font-size: 22px; font-weight: 400; color: rgba(255,255,255,0.6); }
 .rating-bubble-tail {
   position: absolute;
-  top: 100%;
+  top: calc(100% - 2px);
   left: 16px;
   width: 20px; height: 11px;
   background: #2EA6FF;
@@ -543,7 +532,6 @@
   padding: 0 24px;
 }
 
-/* Gift grid */
 .gifts-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -551,7 +539,6 @@
   padding: 17px 16px 16px;
 }
 
-/* Gift Card */
 .gift-card {
   position: relative;
   display: flex;
@@ -588,8 +575,9 @@
   background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
 }
 
-.gift-card-price {
-  margin-top: auto;
+/* ── Gift Price with Sparks ── */
+.gift-price-wrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -601,7 +589,45 @@
   font-weight: 600;
   color: #FFC337;
   white-space: nowrap;
+  overflow: hidden;
+  margin-top: auto;
 }
+
+.gift-price-sparks {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.vg-spark {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgb(255, 190, 39);
+  box-shadow: rgb(255, 190, 39) 0px 0px 3px;
+  animation: sparkFloat var(--dur, 2s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes sparkFloat {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx, 10px), var(--dy, -10px));
+    opacity: 0;
+  }
+}
+
+.gift-price-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .gift-price-star { display: inline-flex; align-items: center; }
 
 /* ── Buy Page ── */
@@ -616,7 +642,6 @@
   overflow: hidden;
 }
 
-/* Pattern background */
 .buy-pattern-bg {
   pointer-events: none;
   position: absolute;
@@ -664,7 +689,6 @@
   padding-top: calc(var(--page-pt, 0px) + 46px);
 }
 
-/* Card */
 .buy-card-wrap {
   display: flex;
   flex-direction: column;
@@ -730,7 +754,6 @@
   color: #fff;
 }
 
-/* ribbon */
 .buy-card-ribbon {
   pointer-events: none;
   position: absolute;
@@ -755,7 +778,6 @@
   color: #fff;
 }
 
-/* message input */
 .buy-msg-wrap { width: 100%; }
 .buy-msg-input {
   width: 100%;
@@ -771,7 +793,6 @@
 .buy-msg-input::placeholder { color: rgba(255,255,255,0.42); }
 .buy-msg-input:focus { border-color: #0C8AFF; }
 
-/* Toggle */
 .buy-toggle-card {
   margin: 10px 16px 0;
   border-radius: 10px;
@@ -819,7 +840,6 @@
   color: #7b7b7b;
 }
 
-/* Availability bar */
 .buy-avail-bar-wrap { margin: 8px 16px 0; }
 .buy-avail-bar {
   position: relative;
@@ -860,7 +880,6 @@
   color: #8d8e93;
 }
 
-/* Action bar */
 .buy-action-bar {
   position: fixed;
   left: 50%;
