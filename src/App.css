@@ -1206,9 +1206,40 @@
   left: 0; right: 0;
   top: 50%;
   transform: translateY(-55%);
-  height: 150px;
+  height: 160px;
   overflow: hidden;
   z-index: 2;
+}
+
+/* центральный маркер — тонкая полоска показывает где остановится */
+.upgrade-roulette-wrap::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0; bottom: 0;
+  width: 180px;
+  transform: translateX(-50%);
+  border-left: 2px solid rgba(255,255,255,0.18);
+  border-right: 2px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* gradient fade по краям */
+.upgrade-roulette-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.55) 0%,
+    transparent 28%,
+    transparent 72%,
+    rgba(0,0,0,0.55) 100%
+  );
+  z-index: 4;
+  pointer-events: none;
 }
 
 .upgrade-roulette-reel {
@@ -1217,12 +1248,13 @@
   flex-direction: row;
   width: max-content;
   top: 0;
-  left: calc(50% - 100px);
+  /* начало: левый край ленты выровнен по центру окна */
+  left: calc(50% + 0px);
 }
 
 .upgrade-roulette-item {
-  width: 200px;
-  height: 150px;
+  width: 180px;
+  height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
