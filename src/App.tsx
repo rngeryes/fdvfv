@@ -28,6 +28,24 @@ const GIFTS: Gift[] = [
   { id: 14, name: 'Instant Ramen',    stars: 25   },
 ]
 
+// Маппинг подарков к SVG файлам
+const GIFT_ICONS: Record<number, string> = {
+  1: '/gifts/Pepe.svg',
+  2: '/gifts/calendar.svg',
+  3: '/gifts/lamp.svg',
+  4: '/gifts/heartlocket.svg',
+  5: '/gifts/lolipop.svg',
+  6: '/gifts/astral.svg',
+  7: '/gifts/parfume.svg',
+  8: '/gifts/escimo.svg',
+  9: '/gifts/durovcap.svg',
+  10: '/gifts/nekohelmet.svg',
+  11: '/gifts/spicedwine.svg',
+  12: '/gifts/lootbag.svg',
+  13: '/gifts/peach.svg',
+  14: '/gifts/signetring.svg',
+}
+
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 function IconSettings() {
   return (
@@ -362,10 +380,16 @@ function ProfilePage({
 
 // ─── Gift Card ────────────────────────────────────────────────────────────────
 function GiftCard({ gift, onClick }: { gift: Gift; onClick: () => void }) {
+  const iconSrc = GIFT_ICONS[gift.id]
+  
   return (
     <button className="gift-card" onClick={onClick} style={{ animationDelay: `${gift.id * 0.035}s` }}>
       <div className="gift-card-img">
-        <div className="gift-card-placeholder" />
+        {iconSrc ? (
+          <img src={iconSrc} alt={gift.name} className="gift-icon" />
+        ) : (
+          <div className="gift-card-placeholder" />
+        )}
       </div>
       <div className="mt-auto flex w-full justify-center">
         <span className="gift-price-wrap">
@@ -431,6 +455,7 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
   const [msg, setMsg] = useState('')
 
   const total = gift.stars * qty
+  const iconSrc = GIFT_ICONS[gift.id]
 
   return (
     <div className="buy-root">
@@ -455,7 +480,11 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
           <div className="buy-card">
             <div className="buy-card-inner">
               <div className="buy-card-gift-img">
-                <div className="buy-card-placeholder" />
+                {iconSrc ? (
+                  <img src={iconSrc} alt={gift.name} className="gift-icon-large" />
+                ) : (
+                  <div className="buy-card-placeholder" />
+                )}
               </div>
               <div className="buy-card-gift-name">{gift.name}</div>
               <div className="buy-card-gift-desc">
