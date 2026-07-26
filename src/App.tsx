@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,6 +44,281 @@ const GIFT_ICONS: Record<number, string> = {
   12: '/gifts/lootbag.svg',
   13: '/gifts/peach.svg',
   14: '/gifts/signetring.svg',
+}
+
+// ─── Plush Pepe CDN Data ──────────────────────────────────────────────────────
+const PEPE_CDN = 'https://cdn.changes.tg/gifts'
+
+// Backdrops for Plush Pepe (subset of nice ones from backdrops.json)
+const PEPE_BACKDROPS = [
+  { centerColor: '#7dd481', edgeColor: '#3a8c49', patternColor: '#1a5e2a', name: 'Green' },
+  { centerColor: '#ca70c6', edgeColor: '#9662d4', patternColor: '#620fb4', name: 'Electric Purple' },
+  { centerColor: '#7596f9', edgeColor: '#6862e4', patternColor: '#2828bc', name: 'Neon Blue' },
+  { centerColor: '#f9b004', edgeColor: '#e07300', patternColor: '#7a2500', name: 'Golden' },
+  { centerColor: '#f97f7f', edgeColor: '#d44040', patternColor: '#8b0000', name: 'Red' },
+  { centerColor: '#58b4c8', edgeColor: '#538bc2', patternColor: '#07609b', name: 'Sky Blue' },
+  { centerColor: '#363738', edgeColor: '#0e0f0f', patternColor: '#6c6868', name: 'Black' },
+  { centerColor: '#b789e4', edgeColor: '#8a5abc', patternColor: '#5b10ab', name: 'Lavender' },
+]
+
+// Lottie model names for Plush Pepe
+const PEPE_MODELS = [
+  'Original',
+  'Aqua Plush',
+  'Gummy Frog',
+  'Emerald Plush',
+  'Hothead',
+  'Hue Jester',
+  'Kung Fu Pepe',
+  'Midas Pepe',
+  'Sketchy',
+  'Yellow Hug',
+  'Frozen',
+  'Pepemint',
+]
+
+// Pattern transforms for backdrop SVG
+const PEPE_PATTERN_TRANSFORMS = [
+  { opacity: 0.1, tx: 106.08, ty: 29.12, scale: 0.3328 },
+  { opacity: 0.1, tx: 309.92, ty: 29.12, scale: 0.3328 },
+  { opacity: 0.1, tx: -2.08, ty: 166.4, scale: 0.3328 },
+  { opacity: 0.1, tx: 418.08, ty: 166.4, scale: 0.3328 },
+  { opacity: 0.1, tx: 208, ty: 395.2, scale: 0.3328 },
+  { opacity: 0.15, tx: 208, ty: 37.44, scale: 0.3328 },
+  { opacity: 0.15, tx: 38.688, ty: 97.76, scale: 0.3328 },
+  { opacity: 0.15, tx: 377.728, ty: 97.76, scale: 0.3328 },
+  { opacity: 0.15, tx: 26.208, ty: 270.4, scale: 0.3328 },
+  { opacity: 0.15, tx: 389.376, ty: 270.4, scale: 0.3328 },
+  { opacity: 0.24, tx: 141.44, ty: 81.12, scale: 0.416 },
+  { opacity: 0.24, tx: 272.48, ty: 81.12, scale: 0.416 },
+  { opacity: 0.24, tx: 68.64, ty: 201.76, scale: 0.4576 },
+  { opacity: 0.24, tx: 346.528, ty: 201.76, scale: 0.4576 },
+  { opacity: 0.24, tx: 208, ty: 320.32, scale: 0.3744 },
+]
+
+// ─── Backdrop SVG Component ───────────────────────────────────────────────────
+function GiftBackdrop({
+  centerColor,
+  edgeColor,
+  patternColor,
+  uid,
+}: {
+  centerColor: string
+  edgeColor: string
+  patternColor: string
+  uid: string
+}) {
+  const filterId = `gf-flt-${uid}`
+  const patternId = `gf-pat-${uid}`
+  const groupId = `gf-grp-${uid}`
+
+  return (
+    <div
+      className="upgrade-backdrop"
+      style={{
+        background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)`,
+      }}
+    >
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 416 416"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        <defs>
+          <filter id={filterId} filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+            <feFlood floodColor={patternColor} />
+            <feComposite in2="SourceGraphic" operator="in" />
+          </filter>
+          {/* Pepe face as pattern symbol */}
+          <image
+            id={patternId}
+            x="-50" y="-50" width="100" height="100"
+            href={`https://cdn.changes.tg/gifts/models/Plush%20Pepe/png/Original.png`}
+            crossOrigin="anonymous"
+          />
+          <g id={groupId}>
+            {PEPE_PATTERN_TRANSFORMS.map((t, i) => (
+              <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                <use href={`#${patternId}`} />
+              </g>
+            ))}
+          </g>
+        </defs>
+        <use href={`#${groupId}`} filter={`url(#${filterId})`} />
+      </svg>
+    </div>
+  )
+}
+
+// ─── Lottie Player Component ──────────────────────────────────────────────────
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    lottie: any
+  }
+}
+
+function LottiePlayer({ modelName, className }: { modelName: string; className?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const animRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    if (!window.lottie) return
+
+    // Destroy previous
+    if (animRef.current) {
+      animRef.current.destroy()
+      animRef.current = null
+    }
+
+    const url = `${PEPE_CDN}/models/Plush%20Pepe/lottie/${encodeURIComponent(modelName)}.json`
+
+    animRef.current = window.lottie.loadAnimation({
+      container: containerRef.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: url,
+    })
+
+    return () => {
+      if (animRef.current) {
+        animRef.current.destroy()
+        animRef.current = null
+      }
+    }
+  }, [modelName])
+
+  return <div ref={containerRef} className={className} />
+}
+
+// ─── Upgrade Modal ────────────────────────────────────────────────────────────
+function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [idx, setIdx] = useState(0)
+
+  // Cycle every 3 seconds
+  useEffect(() => {
+    if (!isOpen) return
+    const total = Math.min(PEPE_BACKDROPS.length, PEPE_MODELS.length)
+    const timer = setInterval(() => {
+      setIdx(i => (i + 1) % total)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [isOpen])
+
+  // Reset on open
+  useEffect(() => {
+    if (isOpen) setIdx(0)
+  }, [isOpen])
+
+  const backdrop = PEPE_BACKDROPS[idx % PEPE_BACKDROPS.length]
+  const modelName = PEPE_MODELS[idx % PEPE_MODELS.length]
+  const uid = `upgrade-${idx}`
+
+  return (
+    <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
+      <div className="modal-sheet upgrade-modal-sheet" onClick={e => e.stopPropagation()}>
+        {/* Header with animated backdrop */}
+        <div className="upgrade-header">
+          <button
+            className="modal-close-btn"
+            onClick={onClose}
+            style={{ zIndex: 5, position: 'absolute', left: 8, top: 8 }}
+          >
+            <IconClose />
+          </button>
+
+          {/* Animated backdrop + pattern */}
+          <GiftBackdrop
+            key={uid}
+            centerColor={backdrop.centerColor}
+            edgeColor={backdrop.edgeColor}
+            patternColor={backdrop.patternColor}
+            uid={uid}
+          />
+
+          {/* Lottie model */}
+          <div className="upgrade-lottie-wrap">
+            <LottiePlayer key={modelName} modelName={modelName} className="upgrade-lottie" />
+          </div>
+
+          {/* Backdrop name badge */}
+          <div className="upgrade-model-badge">{modelName}</div>
+        </div>
+
+        {/* Title */}
+        <h2 className="upgrade-title">Улучшение подарка</h2>
+        <p className="upgrade-desc">
+          Подарок станет уникальным коллекционным. Его можно будет передать или продать.
+        </p>
+
+        {/* Feature list */}
+        <div className="upgrade-features">
+          <div className="upgrade-feature-row">
+            <div className="upgrade-feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
+                <g transform="translate(0,30) scale(1,-1)">
+                  <path d="M 25.1407 18.5892 L 24.5996 18.2027 L 25.1407 18.5892 Z M 25.1020 16.2119 L 25.6302 15.8079 L 25.1020 16.2119 Z M 4.4018 23.5487 L 3.8606 23.9352 L 4.4018 23.5487 Z M 0.8980 16.2119 L 0.3698 15.8079 L 0.8980 16.2119 Z M 14.5887 2.4638 L 14.0605 2.8677 L 14.5887 2.4638 Z M 11.9395 2.8677 L 1.4263 16.6158 L 0.3698 15.8079 L 10.8830 2.0598 L 11.9395 2.8677 Z M 1.4004 18.2027 L 4.9429 23.1622 L 3.8606 23.9352 L 0.3182 18.9758 L 1.4004 18.2027 Z M 6.0292 23.7212 L 19.9708 23.7212 L 19.9708 25.0512 L 6.0292 25.0512 L 6.0292 23.7212 Z M 21.0571 23.1622 L 24.5996 18.2027 L 25.6818 18.9758 L 22.1394 23.9352 L 21.0571 23.1622 Z M 24.5737 16.6158 L 14.0605 2.8677 L 15.1170 2.0598 L 25.6302 15.8079 L 24.5737 16.6158 Z M 24.5996 18.2027 C 24.9405 17.7255 24.9300 17.0817 24.5737 16.6158 L 25.6302 15.8079 C 26.3414 16.7379 26.3623 18.0231 25.6818 18.9758 L 24.5996 18.2027 Z M 19.9708 23.7212 C 20.4019 23.7212 20.8065 23.5130 21.0571 23.1622 L 22.1394 23.9352 C 21.6391 24.6356 20.8314 25.0512 19.9708 25.0512 L 19.9708 23.7212 Z M 4.9429 23.1622 C 5.1935 23.5130 5.5981 23.7212 6.0292 23.7212 L 6.0292 25.0512 C 5.1686 25.0512 4.3609 24.6356 3.8606 23.9352 L 4.9429 23.1622 Z M 1.4263 16.6158 C 1.0700 17.0817 1.0595 17.7255 1.4004 18.2027 L 0.3182 18.9758 C -0.3623 18.0231 -0.3414 16.7379 0.3698 15.8079 L 1.4263 16.6158 Z M 10.8830 2.0598 C 11.9497 0.6650 14.0503 0.6650 15.1170 2.0598 L 14.0605 2.8677 C 13.5261 2.1690 12.4739 2.1690 11.9395 2.8677 L 10.8830 2.0598 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 1.613770)" fill="currentColor" fillRule="nonzero"/>
+                  <path d="M 0.0000 0.6651 L 26.0000 0.6651 L 26.0000 1.9951 L 0.0000 1.9951 L 0.0000 0.6651 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 18.009766)" fill="currentColor" fillRule="nonzero"/>
+                </g>
+              </svg>
+            </div>
+            <div className="upgrade-feature-text">
+              <div className="upgrade-feature-title">Уникальность</div>
+              <div className="upgrade-feature-sub">Подарку будут присвоены уникальный номер, модель, фон и узор.</div>
+            </div>
+          </div>
+
+          <div className="upgrade-feature-row">
+            <div className="upgrade-feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
+                <g transform="translate(0,30) scale(1,-1)">
+                  <path d="M -0.6650 1.3301 C -0.6650 0.9628 -0.3673 0.6651 0.0000 0.6651 C 0.3673 0.6651 0.6650 0.9628 0.6650 1.3301 L -0.6650 1.3301 Z M 11.3350 1.3301 C 11.3350 0.9628 11.6327 0.6651 12.0000 0.6651 C 12.3673 0.6651 12.6650 0.9628 12.6650 1.3301 L 11.3350 1.3301 Z M 0.6650 1.3301 L 0.6650 2.3301 L -0.6650 2.3301 L -0.6650 1.3301 L 0.6650 1.3301 Z M 2.0000 3.6651 L 10.0000 3.6651 L 10.0000 4.9951 L 2.0000 4.9951 L 2.0000 3.6651 Z M 11.3350 2.3301 L 11.3350 1.3301 L 12.6650 1.3301 L 12.6650 2.3301 L 11.3350 2.3301 Z M 10.0000 3.6651 C 10.7373 3.6651 11.3350 3.0674 11.3350 2.3301 L 12.6650 2.3301 C 12.6650 3.8019 11.4718 4.9951 10.0000 4.9951 L 10.0000 3.6651 Z M 0.6650 2.3301 C 0.6650 3.0674 1.2627 3.6651 2.0000 3.6651 L 2.0000 4.9951 C 0.5282 4.9951 -0.6650 3.8019 -0.6650 2.3301 L 0.6650 2.3301 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 3.000000 2.669922)" fill="currentColor" fillRule="nonzero"/>
+                  <path d="M 0.0000 1.9951 C -0.3673 1.9951 -0.6650 1.6973 -0.6650 1.3301 C -0.6650 0.9628 -0.3673 0.6651 0.0000 0.6651 L 0.0000 1.9951 Z M 14.0000 0.6651 C 14.3673 0.6651 14.6650 0.9628 14.6650 1.3301 C 14.6650 1.6973 14.3673 1.9951 14.0000 1.9951 L 14.0000 0.6651 Z M 0.0000 0.6651 L 14.0000 0.6651 L 14.0000 1.9951 L 0.0000 1.9951 L 0.0000 0.6651 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 2.669922)" fill="currentColor" fillRule="nonzero"/>
+                </g>
+              </svg>
+            </div>
+            <div className="upgrade-feature-text">
+              <div className="upgrade-feature-title">Можно продать</div>
+              <div className="upgrade-feature-sub">Подарок можно продать или выставить на аукцион на сторонних NFT-площадках.</div>
+            </div>
+          </div>
+
+          <div className="upgrade-feature-row">
+            <div className="upgrade-feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
+                <g transform="translate(0,30) scale(1,-1)">
+                  <path d="M 0.0000 1.3300 L 0.0000 0.6650 L 15.8333 0.6650 L 15.8333 1.3300 L 15.8333 1.9950 L 0.0000 1.9950 L 0.0000 1.3300 Z" transform="matrix(1.000000 -0.000000 0.000000 -1.000000 7.083313 21.607788)" fill="currentColor" fillRule="nonzero"/>
+                </g>
+              </svg>
+            </div>
+            <div className="upgrade-feature-text">
+              <div className="upgrade-feature-title">Можно носить</div>
+              <div className="upgrade-feature-sub">Подарок можно добавить в профиль и использовать как обложку или статус.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="upgrade-cta-wrap">
+          <button className="upgrade-btn">
+            Улучшить
+            <span className="upgrade-btn-arrow">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M6 13 L12 7.5 L18 13" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 16.5 L12 11 L18 16.5" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -307,9 +582,11 @@ const AVATAR = 'https://t.me/i/userpic/320/PJ_NMq7CXZkdOn96PPFv2KarbnQ0eS9Sz4og1
 function ProfilePage({
   onGifts,
   onShowRating,
+  onShowUpgrade,
 }: {
   onGifts: () => void
   onShowRating: () => void
+  onShowUpgrade: () => void
 }) {
   return (
     <div className="profile-root">
@@ -337,7 +614,58 @@ function ProfilePage({
           </div>
 
           <div className="profile-gifts-area">
-            <div className="profile-gifts-grid" />
+            <div className="profile-gifts-grid">
+              {/* Plush Pepe gift card */}
+              <div
+                className="profile-gift-cell"
+                onClick={onShowUpgrade}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => e.key === 'Enter' && onShowUpgrade()}
+              >
+                {/* Backdrop */}
+                <div
+                  className="profile-gift-backdrop"
+                  style={{
+                    background: 'radial-gradient(50% 65% at 50% 35%, #7dd481 0%, #3a8c49 100%)',
+                  }}
+                >
+                  <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                      <filter id="pg-flt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+                        <feFlood floodColor="#1a5e2a" />
+                        <feComposite in2="SourceGraphic" operator="in" />
+                      </filter>
+                      <image id="pg-pat" x="-50" y="-50" width="100" height="100"
+                        href="https://cdn.changes.tg/gifts/models/Plush%20Pepe/png/Original.png"
+                        crossOrigin="anonymous"
+                      />
+                      <g id="pg-grp">
+                        {PEPE_PATTERN_TRANSFORMS.map((t, i) => (
+                          <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                            <use href="#pg-pat" />
+                          </g>
+                        ))}
+                      </g>
+                    </defs>
+                    <use href="#pg-grp" filter="url(#pg-flt)" />
+                  </svg>
+                </div>
+                {/* Gift image */}
+                <div className="profile-gift-img">
+                  <img
+                    src="/gifts/Pepe.svg"
+                    alt="Plush Pepe"
+                    className="profile-gift-icon"
+                    draggable={false}
+                  />
+                </div>
+                {/* Ribbon */}
+                <div className="profile-gift-ribbon">
+                  <span>#1</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -561,6 +889,7 @@ export default function App() {
   const [page, setPage] = useState<Page>('profile')
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null)
   const [showRating, setShowRating] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
 
   function goGifts() { setPage('gifts') }
   function goProfile() { setPage('profile') }
@@ -569,7 +898,11 @@ export default function App() {
   return (
     <div className="app-root">
       {page === 'profile' && (
-        <ProfilePage onGifts={goGifts} onShowRating={() => setShowRating(true)} />
+        <ProfilePage
+          onGifts={goGifts}
+          onShowRating={() => setShowRating(true)}
+          onShowUpgrade={() => setShowUpgrade(true)}
+        />
       )}
       {page === 'gifts' && (
         <GiftsPage onBack={goProfile} onBuy={goBuy} />
@@ -578,6 +911,7 @@ export default function App() {
         <BuyPage gift={selectedGift} onBack={goGifts} />
       )}
       <RatingModal isOpen={showRating} onClose={() => setShowRating(false)} />
+      <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   )
 }
