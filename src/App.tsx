@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import './App.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -146,6 +146,9 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
       setIdx(0)
       setAllReady(false)
       loadedCount.current = 0
+      // фолбэк — показываем TGS через 4 секунды даже если onLoad не сработал
+      const fallback = setTimeout(() => setAllReady(true), 4000)
+      return () => clearTimeout(fallback)
     }
   }, [isOpen])
 
@@ -221,12 +224,8 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
               <motion.div
                 key={name}
                 className="upgrade-lottie-slot"
-                animate={{ opacity: i === idx ? [0, 1, 1, 0] : 0 }}
-                transition={
-                  i === idx
-                    ? { duration: CYCLE_MS / 1000, ease: 'linear', times: [0, 0.1, 0.9, 1] }
-                    : { duration: 0 }
-                }
+                animate={{ opacity: i === idx ? 1 : 0 }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
               >
                 <PepeLottie
                   modelName={name}
@@ -237,19 +236,16 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             ))}
           </div>
 
-          {/* Бейдж — плавно появляется при смене */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={modelName}
-              className="upgrade-model-badge"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              {modelName}
-            </motion.div>
-          </AnimatePresence>
+          {/* Бейдж — плавно меняется без мигания */}
+          <motion.div
+            key={modelName}
+            className="upgrade-model-badge"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+          >
+            {modelName}
+          </motion.div>
         </div>
 
         {/* Title */}
