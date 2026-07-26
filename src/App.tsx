@@ -98,63 +98,6 @@ const PEPE_PATTERN_TRANSFORMS = [
   { opacity: 0.24, tx: 208, ty: 320.32, scale: 0.3744 },
 ]
 
-// ─── Backdrop SVG Component ───────────────────────────────────────────────────
-function GiftBackdrop({
-  centerColor,
-  edgeColor,
-  patternColor,
-  uid,
-}: {
-  centerColor: string
-  edgeColor: string
-  patternColor: string
-  uid: string
-}) {
-  const filterId = `gf-flt-${uid}`
-  const patternId = `gf-pat-${uid}`
-  const groupId = `gf-grp-${uid}`
-
-  return (
-    <div
-      className="upgrade-backdrop"
-      style={{
-        background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)`,
-      }}
-    >
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 416 416"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <defs>
-          <filter id={filterId} filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
-            <feFlood floodColor={patternColor} />
-            <feComposite in2="SourceGraphic" operator="in" />
-          </filter>
-          {/* Pepe face as pattern symbol */}
-          <image
-            id={patternId}
-            x="-50" y="-50" width="100" height="100"
-            href={`https://cdn.changes.tg/gifts/models/Plush%20Pepe/png/Original.png`}
-            crossOrigin="anonymous"
-          />
-          <g id={groupId}>
-            {PEPE_PATTERN_TRANSFORMS.map((t, i) => (
-              <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
-                <use href={`#${patternId}`} />
-              </g>
-            ))}
-          </g>
-        </defs>
-        <use href={`#${groupId}`} filter={`url(#${filterId})`} />
-      </svg>
-    </div>
-  )
-}
-
 // ─── Lottie Player wrapper (react-lottie-player) ──────────────────────────────
 function PepeLottie({
   modelName,
