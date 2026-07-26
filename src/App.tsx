@@ -84,6 +84,7 @@ interface CdnModel {
 // ─── CDN cache ────────────────────────────────────────────────────────────────
 let _backdropsCache: CdnBackdrop[] | null = null
 const _modelsCache: Record<string, CdnModel[]> = {}
+let _patternsRaw: Record<string, string> | null = null
 
 async function fetchBackdrops(): Promise<CdnBackdrop[]> {
   if (_backdropsCache) return _backdropsCache
@@ -97,11 +98,27 @@ async function fetchModels(giftName: string): Promise<CdnModel[]> {
   if (_modelsCache[giftName]) return _modelsCache[giftName]
   const r = await fetch(`${CDN}/models/${encodeURIComponent(giftName)}/models.json`)
   const data: CdnModel[] = await r.json()
-  // берём только не-crafted, shuffle первые 12
   const normal = data.filter(m => !m.crafted)
   const shuffled = normal.sort(() => Math.random() - 0.5).slice(0, 12)
   _modelsCache[giftName] = shuffled
   return shuffled
+}
+
+async function fetchPatternsForGift(giftName: string): Promise<{ name: string; rarityPermille: number }[]> {
+  if (!_patternsRaw) {
+    const r = await fetch(`${CDN}/patterns.json`)
+    _patternsRaw = await r.json()
+  }
+  const prefix = `${giftName}/`
+  const result: { name: string; rarityPermille: number }[] = []
+  for (const val of Object.values(_patternsRaw!)) {
+    if (val.startsWith(prefix)) {
+      const nameTgs = val.slice(prefix.length) // e.g. "Pirate Hat.tgs"
+      const name = nameTgs.replace(/\.tgs$/, '')
+      result.push({ name, rarityPermille: Math.floor(Math.random() * 50) + 1 })
+    }
+  }
+  return result.sort(() => Math.random() - 0.5).slice(0, 20)
 }
 
 // Pattern transforms for backdrop SVG (универсальные)
@@ -122,6 +139,15 @@ const PATTERN_TRANSFORMS = [
   { opacity: 0.24, tx: 346.528, ty: 201.76, scale: 0.4576 },
   { opacity: 0.24, tx: 208, ty: 320.32, scale: 0.3744 },
 ]
+
+// ─── Upgrade result type ──────────────────────────────────────────────────────
+interface UpgradeResult {
+  giftName: string
+  model: CdnModel
+  backdrop: CdnBackdrop
+  pattern: { name: string; rarityPermille: number }
+  serialNumber: number
+}
 
 // ─── GiftLottie — универсальный плеер для любого гифта ───────────────────────
 function GiftLottie({
@@ -165,16 +191,19 @@ function UpgradeModal({
   isOpen,
   giftId,
   onClose,
+  onUpgraded,
 }: {
   isOpen: boolean
   giftId: number | null
   onClose: () => void
+  onUpgraded?: (result: UpgradeResult) => void
 }) {
   const [idx, setIdx] = useState(0)
   const [allReady, setAllReady] = useState(false)
   const [backdrops, setBackdrops] = useState<CdnBackdrop[]>([])
   const [models, setModels] = useState<CdnModel[]>([])
-  const loadedCount = useRef(0) // unused but kept for compat
+  const [phase, setPhase] = useState<'preview' | 'upgrading' | 'result'>('preview')
+  const [result, setResult] = useState<UpgradeResult | null>(null)
 
   const giftName = giftId ? GIFT_CDN_NAME[giftId] ?? null : null
   const total = Math.min(backdrops.length, models.length)
@@ -187,61 +216,84 @@ function UpgradeModal({
     setAllReady(false)
     setBackdrops([])
     setModels([])
-    loadedCount.current = 0
+    setPhase('preview')
+    setResult(null)
 
     let cancelled = false
 
     Promise.all([fetchBackdrops(), fetchModels(giftName)]).then(([bds, mds]) => {
       if (cancelled) return
-      // берём 8 случайных бэкдропов
       const shuffledBds = [...bds].sort(() => Math.random() - 0.5).slice(0, 8)
       setBackdrops(shuffledBds)
       setModels(mds)
     })
 
-    // фолбэк — показываем TGS через 5с даже если onLoad не сработал
     const fallback = setTimeout(() => { if (!cancelled) setAllReady(true) }, 5000)
-
-    return () => {
-      cancelled = true
-      clearTimeout(fallback)
-    }
+    return () => { cancelled = true; clearTimeout(fallback) }
   }, [isOpen, giftName])
 
-  // Цикл смены слайда
+  // handleUpgrade — крутит рулетку 2.5с, выбирает победителя
+  const handleUpgrade = useCallback(async () => {
+    if (!giftName || backdrops.length === 0 || models.length === 0) return
+    setPhase('upgrading')
+
+    const patternsPromise = fetchPatternsForGift(giftName)
+    await new Promise(r => setTimeout(r, 2500))
+
+    const patterns = await patternsPromise
+    const winBackdrop = backdrops[Math.floor(Math.random() * backdrops.length)]
+    const winModel = models[Math.floor(Math.random() * models.length)]
+    const winPattern = patterns.length > 0
+      ? patterns[Math.floor(Math.random() * patterns.length)]
+      : { name: 'Standard', rarityPermille: 10 }
+    const serialNumber = Math.floor(Math.random() * 9000) + 100
+
+    const res: UpgradeResult = { giftName, model: winModel, backdrop: winBackdrop, pattern: winPattern, serialNumber }
+    setResult(res)
+    setPhase('result')
+    onUpgraded?.(res)
+  }, [giftName, backdrops, models, onUpgraded])
+
+  // Цикл смены слайда — только в preview
   useEffect(() => {
-    if (!isOpen || total === 0) return
+    if (!isOpen || phase !== 'preview' || total === 0) return
     const timer = setInterval(() => setIdx(i => (i + 1) % total), CYCLE_MS)
     return () => clearInterval(timer)
-  }, [isOpen, total])
+  }, [isOpen, phase, total])
 
-  const handleTgsReady = useCallback(() => {
-    setAllReady(true)
-  }, [])
+  const handleTgsReady = useCallback(() => { setAllReady(true) }, [])
 
-  const backdrop = backdrops[idx % Math.max(backdrops.length, 1)]
-  const model = models[idx % Math.max(models.length, 1)]
+  // Текущие данные для отображения (в result берём выигравшие)
+  const activeBackdrop = phase === 'result' && result ? result.backdrop : backdrops[idx % Math.max(backdrops.length, 1)]
+  const activeModel    = phase === 'result' && result ? result.model    : models[idx % Math.max(models.length, 1)]
 
-  const centerColor = backdrop?.hex?.centerColor ?? '#363738'
-  const edgeColor = backdrop?.hex?.edgeColor ?? '#0e0f0f'
-  const patternColor = backdrop?.hex?.patternColor ?? '#6c6868'
-  const pngUrl = giftName && model
-    ? `${CDN}/models/${encodeURIComponent(giftName)}/png/${encodeURIComponent(model.name)}.png`
+  const centerColor  = activeBackdrop?.hex?.centerColor  ?? '#363738'
+  const edgeColor    = activeBackdrop?.hex?.edgeColor    ?? '#0e0f0f'
+  const patternColor = activeBackdrop?.hex?.patternColor ?? '#6c6868'
+
+  const pngUrl = giftName && activeModel
+    ? `${CDN}/models/${encodeURIComponent(giftName)}/png/${encodeURIComponent(activeModel.name)}.png`
     : `${CDN}/models/Plush%20Pepe/png/Original.png`
 
+  // Список моделей для рулетки (28 штук, последний — победитель)
+  const rouletteModels = phase === 'upgrading' && result === null && models.length > 0
+    ? [...models, ...models, ...models].slice(0, 28)
+    : []
+
   return (
-    <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
+    <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={phase !== 'upgrading' ? onClose : undefined}>
       <div className="modal-sheet upgrade-modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="upgrade-header">
           <button
             className="modal-close-btn"
             onClick={onClose}
-            style={{ zIndex: 5, position: 'absolute', left: 8, top: 8 }}
+            disabled={phase === 'upgrading'}
+            style={{ zIndex: 5, position: 'absolute', left: 8, top: 8, opacity: phase === 'upgrading' ? 0.35 : 1 }}
           >
             <IconClose />
           </button>
 
-          {/* Фон — плавно меняет цвет через framer-motion */}
+          {/* Анимированный фон — меняет цвет плавно */}
           <motion.div
             className="upgrade-backdrop"
             animate={{
@@ -249,22 +301,13 @@ function UpgradeModal({
             }}
             transition={{ duration: CYCLE_MS / 1000 * 0.35, ease: 'easeInOut' }}
           >
-            <svg
-              width="100%" height="100%"
-              viewBox="0 0 416 416"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-              preserveAspectRatio="xMidYMid slice"
-            >
+            <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
               <defs>
                 <filter id="upflt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
                   <feFlood floodColor={patternColor} />
                   <feComposite in2="SourceGraphic" operator="in" />
                 </filter>
-                <image id="uppat" x="-50" y="-50" width="100" height="100"
-                  href={pngUrl}
-                  crossOrigin="anonymous"
-                />
+                <image id="uppat" x="-50" y="-50" width="100" height="100" href={pngUrl} crossOrigin="anonymous" />
                 <g id="upgrp">
                   {PATTERN_TRANSFORMS.map((t, i) => (
                     <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
@@ -277,118 +320,174 @@ function UpgradeModal({
             </svg>
           </motion.div>
 
-          {/* Только текущий + следующий TGS в DOM; остальные не рендерятся */}
-          {giftName && models.length > 0 && (
-            <div
-              className="upgrade-lottie-wrap"
-              style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
-            >
+          {/* PREVIEW — TGS карусель (текущий + следующий) */}
+          {phase === 'preview' && giftName && models.length > 0 && (
+            <div className="upgrade-lottie-wrap" style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.5s ease' }}>
               {models.map((m, i) => {
                 const nextIdx = (idx + 1) % models.length
                 const isActive = i === idx
-                const isNext = i === nextIdx
+                const isNext   = i === nextIdx
                 if (!isActive && !isNext) return null
                 return (
-                  <motion.div
-                    key={m.name}
-                    className="upgrade-lottie-slot"
-                    animate={{ opacity: isActive ? 1 : 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                  >
-                    <GiftLottie
-                      giftName={giftName}
-                      modelName={m.name}
-                      onReady={isActive ? handleTgsReady : undefined}
-                      className="upgrade-lottie"
-                    />
+                  <motion.div key={m.name} className="upgrade-lottie-slot" animate={{ opacity: isActive ? 1 : 0 }} transition={{ duration: 0.5 }}>
+                    <GiftLottie giftName={giftName} modelName={m.name} onReady={isActive ? handleTgsReady : undefined} className="upgrade-lottie" />
                   </motion.div>
                 )
               })}
             </div>
           )}
 
-          {/* Бейдж с именем модели */}
-          {model && (
-            <motion.div
-              key={model.name}
-              className="upgrade-model-badge"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, ease: 'easeInOut' }}
-            >
-              {model.name}
+          {/* UPGRADING — горизонтальная рулетка translateX -100% → 0 */}
+          {phase === 'upgrading' && giftName && (
+            <div className="upgrade-roulette-wrap">
+              <motion.div
+                className="upgrade-roulette-reel"
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                transition={{ duration: 2.5, ease: 'linear' }}
+              >
+                {rouletteModels.map((m, i) => (
+                  <div key={i} className="upgrade-roulette-item">
+                    <GiftLottie giftName={giftName} modelName={m.name} className="upgrade-lottie" />
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+          )}
+
+          {/* RESULT — победивший TGS */}
+          {phase === 'result' && giftName && result && (
+            <div className="upgrade-lottie-wrap" style={{ opacity: 1 }}>
+              <div className="upgrade-lottie-slot" style={{ opacity: 1 }}>
+                <GiftLottie giftName={giftName} modelName={result.model.name} className="upgrade-lottie" />
+              </div>
+            </div>
+          )}
+
+          {/* Бейдж: в preview — имя модели, в result — название + номер */}
+          {phase === 'preview' && activeModel && (
+            <motion.div key={activeModel.name} className="upgrade-model-badge" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+              {activeModel.name}
             </motion.div>
+          )}
+          {phase === 'result' && result && (
+            <div className="upgrade-model-badge">
+              {result.giftName} #{result.serialNumber}
+            </div>
           )}
         </div>
 
-        {/* Title */}
-        <h2 className="upgrade-title">Улучшение подарка</h2>
-        <p className="upgrade-desc">
-          Подарок станет уникальным коллекционным. Его можно будет передать или продать.
-        </p>
+        {/* ── RESULT экран ── */}
+        {phase === 'result' && result ? (
+          <>
+            <div className="upgrade-result-table">
+              <div className="upgrade-result-row">
+                <span className="upgrade-result-key">Модель</span>
+                <span className="upgrade-result-val">
+                  {result.model.name}
+                  <span className="upgrade-rarity-badge">{rarityLabel(result.model.rarityPermille)}</span>
+                </span>
+              </div>
+              <div className="upgrade-result-row">
+                <span className="upgrade-result-key">Узор</span>
+                <span className="upgrade-result-val">
+                  {result.pattern.name}
+                  <span className="upgrade-rarity-badge">{rarityLabel(result.pattern.rarityPermille)}</span>
+                </span>
+              </div>
+              <div className="upgrade-result-row">
+                <span className="upgrade-result-key">Фон</span>
+                <span className="upgrade-result-val">
+                  {result.backdrop.name}
+                  <span className="upgrade-rarity-badge">{rarityLabel(Math.floor(Math.random() * 30) + 5)}</span>
+                </span>
+              </div>
+            </div>
+            <div className="upgrade-cta-wrap">
+              <button className="upgrade-btn" onClick={onClose}>OK</button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* ── PREVIEW / UPGRADING экран ── */}
+            <h2 className="upgrade-title">Улучшение подарка</h2>
+            <p className="upgrade-desc">
+              Подарок станет уникальным коллекционным. Его можно будет передать или продать.
+            </p>
 
-        {/* Feature list */}
-        <div className="upgrade-features">
-          <div className="upgrade-feature-row">
-            <div className="upgrade-feature-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
-                <g transform="translate(0,30) scale(1,-1)">
-                  <path d="M 25.1407 18.5892 L 24.5996 18.2027 L 25.1407 18.5892 Z M 25.1020 16.2119 L 25.6302 15.8079 L 25.1020 16.2119 Z M 4.4018 23.5487 L 3.8606 23.9352 L 4.4018 23.5487 Z M 0.8980 16.2119 L 0.3698 15.8079 L 0.8980 16.2119 Z M 14.5887 2.4638 L 14.0605 2.8677 L 14.5887 2.4638 Z M 11.9395 2.8677 L 1.4263 16.6158 L 0.3698 15.8079 L 10.8830 2.0598 L 11.9395 2.8677 Z M 1.4004 18.2027 L 4.9429 23.1622 L 3.8606 23.9352 L 0.3182 18.9758 L 1.4004 18.2027 Z M 6.0292 23.7212 L 19.9708 23.7212 L 19.9708 25.0512 L 6.0292 25.0512 L 6.0292 23.7212 Z M 21.0571 23.1622 L 24.5996 18.2027 L 25.6818 18.9758 L 22.1394 23.9352 L 21.0571 23.1622 Z M 24.5737 16.6158 L 14.0605 2.8677 L 15.1170 2.0598 L 25.6302 15.8079 L 24.5737 16.6158 Z M 24.5996 18.2027 C 24.9405 17.7255 24.9300 17.0817 24.5737 16.6158 L 25.6302 15.8079 C 26.3414 16.7379 26.3623 18.0231 25.6818 18.9758 L 24.5996 18.2027 Z M 19.9708 23.7212 C 20.4019 23.7212 20.8065 23.5130 21.0571 23.1622 L 22.1394 23.9352 C 21.6391 24.6356 20.8314 25.0512 19.9708 25.0512 L 19.9708 23.7212 Z M 4.9429 23.1622 C 5.1935 23.5130 5.5981 23.7212 6.0292 23.7212 L 6.0292 25.0512 C 5.1686 25.0512 4.3609 24.6356 3.8606 23.9352 L 4.9429 23.1622 Z M 1.4263 16.6158 C 1.0700 17.0817 1.0595 17.7255 1.4004 18.2027 L 0.3182 18.9758 C -0.3623 18.0231 -0.3414 16.7379 0.3698 15.8079 L 1.4263 16.6158 Z M 10.8830 2.0598 C 11.9497 0.6650 14.0503 0.6650 15.1170 2.0598 L 14.0605 2.8677 C 13.5261 2.1690 12.4739 2.1690 11.9395 2.8677 L 10.8830 2.0598 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 1.613770)" fill="currentColor" fillRule="nonzero"/>
-                  <path d="M 0.0000 0.6651 L 26.0000 0.6651 L 26.0000 1.9951 L 0.0000 1.9951 L 0.0000 0.6651 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 18.009766)" fill="currentColor" fillRule="nonzero"/>
-                </g>
-              </svg>
+            <div className="upgrade-features">
+              <div className="upgrade-feature-row">
+                <div className="upgrade-feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
+                    <g transform="translate(0,30) scale(1,-1)">
+                      <path d="M 25.1407 18.5892 L 24.5996 18.2027 L 25.1407 18.5892 Z M 25.1020 16.2119 L 25.6302 15.8079 L 25.1020 16.2119 Z M 4.4018 23.5487 L 3.8606 23.9352 L 4.4018 23.5487 Z M 0.8980 16.2119 L 0.3698 15.8079 L 0.8980 16.2119 Z M 14.5887 2.4638 L 14.0605 2.8677 L 14.5887 2.4638 Z M 11.9395 2.8677 L 1.4263 16.6158 L 0.3698 15.8079 L 10.8830 2.0598 L 11.9395 2.8677 Z M 1.4004 18.2027 L 4.9429 23.1622 L 3.8606 23.9352 L 0.3182 18.9758 L 1.4004 18.2027 Z M 6.0292 23.7212 L 19.9708 23.7212 L 19.9708 25.0512 L 6.0292 25.0512 L 6.0292 23.7212 Z M 21.0571 23.1622 L 24.5996 18.2027 L 25.6818 18.9758 L 22.1394 23.9352 L 21.0571 23.1622 Z M 24.5737 16.6158 L 14.0605 2.8677 L 15.1170 2.0598 L 25.6302 15.8079 L 24.5737 16.6158 Z M 24.5996 18.2027 C 24.9405 17.7255 24.9300 17.0817 24.5737 16.6158 L 25.6302 15.8079 C 26.3414 16.7379 26.3623 18.0231 25.6818 18.9758 L 24.5996 18.2027 Z M 19.9708 23.7212 C 20.4019 23.7212 20.8065 23.5130 21.0571 23.1622 L 22.1394 23.9352 C 21.6391 24.6356 20.8314 25.0512 19.9708 25.0512 L 19.9708 23.7212 Z M 4.9429 23.1622 C 5.1935 23.5130 5.5981 23.7212 6.0292 23.7212 L 6.0292 25.0512 C 5.1686 25.0512 4.3609 24.6356 3.8606 23.9352 L 4.9429 23.1622 Z M 1.4263 16.6158 C 1.0700 17.0817 1.0595 17.7255 1.4004 18.2027 L 0.3182 18.9758 C -0.3623 18.0231 -0.3414 16.7379 0.3698 15.8079 L 1.4263 16.6158 Z M 10.8830 2.0598 C 11.9497 0.6650 14.0503 0.6650 15.1170 2.0598 L 14.0605 2.8677 C 13.5261 2.1690 12.4739 2.1690 11.9395 2.8677 L 10.8830 2.0598 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 1.613770)" fill="currentColor" fillRule="nonzero"/>
+                      <path d="M 0.0000 0.6651 L 26.0000 0.6651 L 26.0000 1.9951 L 0.0000 1.9951 L 0.0000 0.6651 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 18.009766)" fill="currentColor" fillRule="nonzero"/>
+                    </g>
+                  </svg>
+                </div>
+                <div className="upgrade-feature-text">
+                  <div className="upgrade-feature-title">Уникальность</div>
+                  <div className="upgrade-feature-sub">Подарку будут присвоены уникальный номер, модель, фон и узор.</div>
+                </div>
+              </div>
+              <div className="upgrade-feature-row">
+                <div className="upgrade-feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
+                    <g transform="translate(0,30) scale(1,-1)">
+                      <path d="M -0.6650 1.3301 C -0.6650 0.9628 -0.3673 0.6651 0.0000 0.6651 C 0.3673 0.6651 0.6650 0.9628 0.6650 1.3301 L -0.6650 1.3301 Z M 11.3350 1.3301 C 11.3350 0.9628 11.6327 0.6651 12.0000 0.6651 C 12.3673 0.6651 12.6650 0.9628 12.6650 1.3301 L 11.3350 1.3301 Z M 0.6650 1.3301 L 0.6650 2.3301 L -0.6650 2.3301 L -0.6650 1.3301 L 0.6650 1.3301 Z M 2.0000 3.6651 L 10.0000 3.6651 L 10.0000 4.9951 L 2.0000 4.9951 L 2.0000 3.6651 Z M 11.3350 2.3301 L 11.3350 1.3301 L 12.6650 1.3301 L 12.6650 2.3301 L 11.3350 2.3301 Z M 10.0000 3.6651 C 10.7373 3.6651 11.3350 3.0674 11.3350 2.3301 L 12.6650 2.3301 C 12.6650 3.8019 11.4718 4.9951 10.0000 4.9951 L 10.0000 3.6651 Z M 0.6650 2.3301 C 0.6650 3.0674 1.2627 3.6651 2.0000 3.6651 L 2.0000 4.9951 C 0.5282 4.9951 -0.6650 3.8019 -0.6650 2.3301 L 0.6650 2.3301 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 3.000000 2.669922)" fill="currentColor" fillRule="nonzero"/>
+                      <path d="M 0.0000 1.9951 C -0.3673 1.9951 -0.6650 1.6973 -0.6650 1.3301 C -0.6650 0.9628 -0.3673 0.6651 0.0000 0.6651 L 0.0000 1.9951 Z M 14.0000 0.6651 C 14.3673 0.6651 14.6650 0.9628 14.6650 1.3301 C 14.6650 1.6973 14.3673 1.9951 14.0000 1.9951 L 14.0000 0.6651 Z M 0.0000 0.6651 L 14.0000 0.6651 L 14.0000 1.9951 L 0.0000 1.9951 L 0.0000 0.6651 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 2.669922)" fill="currentColor" fillRule="nonzero"/>
+                    </g>
+                  </svg>
+                </div>
+                <div className="upgrade-feature-text">
+                  <div className="upgrade-feature-title">Можно продать</div>
+                  <div className="upgrade-feature-sub">Подарок можно продать или выставить на аукцион на сторонних NFT-площадках.</div>
+                </div>
+              </div>
+              <div className="upgrade-feature-row">
+                <div className="upgrade-feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
+                    <g transform="translate(0,30) scale(1,-1)">
+                      <path d="M 0.0000 1.3300 L 0.0000 0.6650 L 15.8333 0.6650 L 15.8333 1.3300 L 15.8333 1.9950 L 0.0000 1.9950 L 0.0000 1.3300 Z" transform="matrix(1.000000 -0.000000 0.000000 -1.000000 7.083313 21.607788)" fill="currentColor" fillRule="nonzero"/>
+                    </g>
+                  </svg>
+                </div>
+                <div className="upgrade-feature-text">
+                  <div className="upgrade-feature-title">Можно носить</div>
+                  <div className="upgrade-feature-sub">Подарок можно добавить в профиль и использовать как обложку или статус.</div>
+                </div>
+              </div>
             </div>
-            <div className="upgrade-feature-text">
-              <div className="upgrade-feature-title">Уникальность</div>
-              <div className="upgrade-feature-sub">Подарку будут присвоены уникальный номер, модель, фон и узор.</div>
-            </div>
-          </div>
 
-          <div className="upgrade-feature-row">
-            <div className="upgrade-feature-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
-                <g transform="translate(0,30) scale(1,-1)">
-                  <path d="M -0.6650 1.3301 C -0.6650 0.9628 -0.3673 0.6651 0.0000 0.6651 C 0.3673 0.6651 0.6650 0.9628 0.6650 1.3301 L -0.6650 1.3301 Z M 11.3350 1.3301 C 11.3350 0.9628 11.6327 0.6651 12.0000 0.6651 C 12.3673 0.6651 12.6650 0.9628 12.6650 1.3301 L 11.3350 1.3301 Z M 0.6650 1.3301 L 0.6650 2.3301 L -0.6650 2.3301 L -0.6650 1.3301 L 0.6650 1.3301 Z M 2.0000 3.6651 L 10.0000 3.6651 L 10.0000 4.9951 L 2.0000 4.9951 L 2.0000 3.6651 Z M 11.3350 2.3301 L 11.3350 1.3301 L 12.6650 1.3301 L 12.6650 2.3301 L 11.3350 2.3301 Z M 10.0000 3.6651 C 10.7373 3.6651 11.3350 3.0674 11.3350 2.3301 L 12.6650 2.3301 C 12.6650 3.8019 11.4718 4.9951 10.0000 4.9951 L 10.0000 3.6651 Z M 0.6650 2.3301 C 0.6650 3.0674 1.2627 3.6651 2.0000 3.6651 L 2.0000 4.9951 C 0.5282 4.9951 -0.6650 3.8019 -0.6650 2.3301 L 0.6650 2.3301 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 3.000000 2.669922)" fill="currentColor" fillRule="nonzero"/>
-                  <path d="M 0.0000 1.9951 C -0.3673 1.9951 -0.6650 1.6973 -0.6650 1.3301 C -0.6650 0.9628 -0.3673 0.6651 0.0000 0.6651 L 0.0000 1.9951 Z M 14.0000 0.6651 C 14.3673 0.6651 14.6650 0.9628 14.6650 1.3301 C 14.6650 1.6973 14.3673 1.9951 14.0000 1.9951 L 14.0000 0.6651 Z M 0.0000 0.6651 L 14.0000 0.6651 L 14.0000 1.9951 L 0.0000 1.9951 L 0.0000 0.6651 Z" transform="matrix(1.000000 0.000000 0.000000 1.000000 2.000000 2.669922)" fill="currentColor" fillRule="nonzero"/>
-                </g>
-              </svg>
+            <div className="upgrade-cta-wrap">
+              <button
+                className="upgrade-btn"
+                onClick={handleUpgrade}
+                disabled={phase === 'upgrading' || models.length === 0}
+              >
+                {phase === 'upgrading' ? 'Улучшаем...' : (
+                  <>
+                    Улучшить
+                    <span className="upgrade-btn-arrow">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                        <path d="M6 13 L12 7.5 L18 13" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M6 16.5 L12 11 L18 16.5" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  </>
+                )}
+              </button>
             </div>
-            <div className="upgrade-feature-text">
-              <div className="upgrade-feature-title">Можно продать</div>
-              <div className="upgrade-feature-sub">Подарок можно продать или выставить на аукцион на сторонних NFT-площадках.</div>
-            </div>
-          </div>
-
-          <div className="upgrade-feature-row">
-            <div className="upgrade-feature-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none" style={{ color: '#2EA6FF' }}>
-                <g transform="translate(0,30) scale(1,-1)">
-                  <path d="M 0.0000 1.3300 L 0.0000 0.6650 L 15.8333 0.6650 L 15.8333 1.3300 L 15.8333 1.9950 L 0.0000 1.9950 L 0.0000 1.3300 Z" transform="matrix(1.000000 -0.000000 0.000000 -1.000000 7.083313 21.607788)" fill="currentColor" fillRule="nonzero"/>
-                </g>
-              </svg>
-            </div>
-            <div className="upgrade-feature-text">
-              <div className="upgrade-feature-title">Можно носить</div>
-              <div className="upgrade-feature-sub">Подарок можно добавить в профиль и использовать как обложку или статус.</div>
-            </div>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="upgrade-cta-wrap">
-          <button className="upgrade-btn">
-            Улучшить
-            <span className="upgrade-btn-arrow">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <path d="M6 13 L12 7.5 L18 13" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M6 16.5 L12 11 L18 16.5" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </span>
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   )
+}
+
+function rarityLabel(permille: number): string {
+  const pct = (permille / 10).toFixed(1).replace(/\.0$/, '')
+  return `${pct}%`
 }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -962,6 +1061,7 @@ export default function App() {
         isOpen={upgradeGiftId !== null}
         giftId={upgradeGiftId}
         onClose={closeUpgrade}
+        onUpgraded={() => {}}
       />
     </div>
   )
