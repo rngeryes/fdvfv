@@ -83,9 +83,9 @@
   overflow: hidden;
 }
 
-/* Info card — увеличен отступ сверху на 10px (было 10px, стало 20px) */
+/* Info card — минимальный отступ сверху */
 .profile-info-card {
-  margin: calc(var(--page-pt, 0px) + 259px + 20px) 16px 0;
+  margin: calc(var(--page-pt, 0px) + 230px + 6px) 16px 0;
   border-radius: 10px;
   background: #1C1C1C;
   overflow: hidden;
@@ -133,7 +133,7 @@
   z-index: 5;
   margin: 0 auto;
   max-width: 450px;
-  height: calc(var(--page-pt, 0px) + 259px);
+  height: calc(var(--page-pt, 0px) + 230px);
   overflow: hidden;
 }
 
@@ -176,12 +176,12 @@
   display: block;
 }
 
-/* Name — 168px from top of page content area */
+/* Name — 140px from top (сместил ближе к аватару) */
 .profile-name-wrap {
   pointer-events: auto;
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--page-pt, 0px) + 168px);
+  top: calc(var(--page-pt, 0px) + 160px);
   padding: 0 16px;
   display: flex;
   justify-content: center;
@@ -197,12 +197,12 @@
   max-width: 280px;
 }
 
-/* Status row (badge + online) — 207px */
+/* Status row (badge + online) — 198px */
 .profile-status-wrap {
   pointer-events: auto;
   position: absolute;
   left: 0; right: 0;
-  top: calc(var(--page-pt, 0px) + 207px);
+  top: calc(var(--page-pt, 0px) + 198px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -348,7 +348,6 @@
 }
 .rating-bubble-score { font-size: 24px; font-weight: 600; color: #fff; line-height: 1; white-space: nowrap; }
 .rating-bubble-max { font-size: 22px; font-weight: 400; color: rgba(255,255,255,0.6); }
-/* Треугольник смещен наверх на 2px */
 .rating-bubble-tail {
   position: absolute;
   top: calc(100% - 2px);
