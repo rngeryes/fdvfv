@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
 import './App.css'
 
@@ -158,13 +158,24 @@ function GiftBackdrop({
 function PepeLottie({
   modelName,
   visible,
+  onReady,
   className,
 }: {
   modelName: string
   visible: boolean
+  onReady?: () => void
   className?: string
 }) {
   const url = `${PEPE_CDN}/models/Plush%20Pepe/lottie/${encodeURIComponent(modelName)}.json`
+  const notified = useRef(false)
+
+  const handleLoad = useCallback(() => {
+    if (!notified.current) {
+      notified.current = true
+      onReady?.()
+    }
+  }, [onReady])
+
   return (
     <div
       className="upgrade-lottie-slot"
@@ -177,6 +188,7 @@ function PepeLottie({
         className={className}
         style={{ width: '100%', height: '100%' }}
         rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
+        onLoad={handleLoad}
       />
     </div>
   )
@@ -185,7 +197,19 @@ function PepeLottie({
 // ─── Upgrade Modal ────────────────────────────────────────────────────────────
 function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [idx, setIdx] = useState(0)
+  const [allReady, setAllReady] = useState(false)
   const total = Math.min(PEPE_BACKDROPS.length, PEPE_MODELS.length)
+  // track how many TGS have loaded
+  const loadedCount = useRef(0)
+
+  // Reset state on open/close
+  useEffect(() => {
+    if (isOpen) {
+      setIdx(0)
+      setAllReady(false)
+      loadedCount.current = 0
+    }
+  }, [isOpen])
 
   // Cycle every 3 seconds
   useEffect(() => {
@@ -196,10 +220,12 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     return () => clearInterval(timer)
   }, [isOpen, total])
 
-  // Reset on open
-  useEffect(() => {
-    if (isOpen) setIdx(0)
-  }, [isOpen])
+  const handleTgsReady = useCallback(() => {
+    loadedCount.current += 1
+    if (loadedCount.current >= total) {
+      setAllReady(true)
+    }
+  }, [total])
 
   const backdrop = PEPE_BACKDROPS[idx % PEPE_BACKDROPS.length]
   const modelName = PEPE_MODELS[idx % PEPE_MODELS.length]
@@ -217,7 +243,7 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <IconClose />
           </button>
 
-          {/* All backdrops stacked, active one fades in */}
+          {/* All backdrops — always rendered, active one fades in (always smooth) */}
           {PEPE_BACKDROPS.slice(0, total).map((bd, i) => (
             <div
               key={i}
@@ -233,20 +259,24 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             </div>
           ))}
 
-          {/* All Lottie models preloaded, active one fades in */}
-          <div className="upgrade-lottie-wrap">
+          {/* All TGS preloaded silently; shown (with smooth per-slot fade) only after all ready */}
+          <div
+            className="upgrade-lottie-wrap"
+            style={{ opacity: allReady ? 1 : 0, transition: 'opacity 0.6s ease' }}
+          >
             {PEPE_MODELS.slice(0, total).map((name, i) => (
               <PepeLottie
                 key={name}
                 modelName={name}
                 visible={i === idx}
+                onReady={handleTgsReady}
                 className="upgrade-lottie"
               />
             ))}
           </div>
 
-          {/* Backdrop name badge */}
-          <div className="upgrade-model-badge">{modelName}</div>
+          {/* Backdrop name badge — fades in on each change via key remount */}
+          <div key={modelName} className="upgrade-model-badge">{modelName}</div>
         </div>
 
         {/* Title */}
