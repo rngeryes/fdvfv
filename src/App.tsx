@@ -149,7 +149,16 @@ function BottomNav({
       <div className="bnav-spacer" />
       <button
         className={`bnav-item${page === 'gifts' ? ' active' : ''}`}
-        onClick={onGifts}
+        onClick={() => {
+          if (navigator.vibrate) navigator.vibrate(10)
+          onGifts()
+        }}
+        onMouseEnter={e => {
+          if (page !== 'gifts') (e.currentTarget as HTMLElement).style.color = '#f5f5f5'
+        }}
+        onMouseLeave={e => {
+          if (page !== 'gifts') (e.currentTarget as HTMLElement).style.color = ''
+        }}
       >
         <IconGift />
         <span>Подарки</span>
@@ -181,8 +190,16 @@ function RatingModal({ onClose }: { onClose: () => void }) {
         {/* progress bar section */}
         <div className="rating-progress-wrap">
           <div className="rating-bubble">
-            <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
-              <path d="M13.98 22 C15.34 22 16.44 20.85 16.44 19.49 C16.44 19.07 16.34 18.68 16.15 18.33 L18.64 12.42 C19.03 11.67 20.07 11.54 20.62 12.19 L22.89 14.82 C23.1 15.06 23.14 15.39 23.07 15.7 C23.04 15.86 23.02 16.03 23.02 16.2 C23.02 17.56 24.13 18.67 25.49 18.67 C26.85 18.67 27.96 17.56 27.96 16.2 C27.96 15.17 27.33 14.3 26.44 13.92 C26.13 13.8 25.86 13.56 25.79 13.23 L23.17 1.42 C22.99 0.59 22.26 0 21.41 0 L6.55 0 C5.7 0 4.97 0.59 4.78 1.42 L2.17 13.23 C2.1 13.56 1.83 13.8 1.52 13.92 C0.63 14.29 0 15.17 0 16.2 C0 17.56 1.1 18.67 2.47 18.67 C3.83 18.67 4.93 17.56 4.93 16.2 C4.93 16.03 4.92 15.86 4.88 15.7 C4.82 15.39 4.86 15.06 5.06 14.82 L7.33 12.19 C7.89 11.54 8.92 11.67 9.32 12.42 L11.86 18.33 C11.62 18.68 11.51 19.07 11.51 19.49 C11.51 20.85 12.62 22 13.98 22 Z" fill="white"/>
+            {/* корона — точная копия из оригинала, transform переворачивает её правильно */}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30" fill="none">
+              <g transform="translate(0,30) scale(1,-1)">
+                <path
+                  d="M 13.9775 21.9551 C 15.3398 21.9551 16.4443 20.8506 16.4443 19.4883 C 16.4443 19.0698 16.3392 18.6766 16.1547 18.3320 C 15.9962 18.0358 15.9405 17.6792 16.0941 17.3805 L 18.6416 12.4248 C 19.0321 11.6662 20.0663 11.5427 20.6240 12.1885 L 22.8915 14.8162 C 23.0986 15.0562 23.1370 15.3919 23.0730 15.7023 C 23.0400 15.8628 23.0225 16.0289 23.0225 16.1992 C 23.0225 17.5615 24.1270 18.6660 25.4893 18.6660 C 26.8514 18.6658 27.9551 17.5614 27.9551 16.1992 C 27.9549 15.1728 27.3277 14.2952 26.4357 13.9247 C 26.1268 13.7963 25.8580 13.5579 25.7858 13.2313 L 23.1729 1.4160 C 22.9897 0.5891 22.2571 0.0001 21.4102 0.0000 L 6.5469 0.0000 C 5.6998 0.0000 4.9674 0.5890 4.7842 1.4160 L 2.1713 13.2310 C 2.0990 13.5578 1.8300 13.7962 1.5209 13.9245 C 0.6283 14.2948 0.0001 15.1724 0.0000 16.1992 C 0.0000 17.5615 1.1045 18.6660 2.4668 18.6660 C 3.8291 18.6660 4.9336 17.5615 4.9336 16.1992 C 4.9336 16.0292 4.9159 15.8633 4.8826 15.7031 C 4.8180 15.3928 4.8565 15.0572 5.0636 14.8173 L 7.3330 12.1885 C 7.8907 11.5428 8.9250 11.6662 9.3154 12.4248 L 11.8610 17.3783 C 12.0146 17.6772 11.9588 18.0339 11.8004 18.3302 C 11.6158 18.6754 11.5108 19.0695 11.5107 19.4883 C 11.5107 20.8505 12.6154 21.9549 13.9775 21.9551 Z"
+                  transform="matrix(1 0 0 1 1.028809 4.934570)"
+                  fill="white"
+                  fillRule="nonzero"
+                />
+              </g>
             </svg>
             <span className="rating-bubble-score"><span>0</span><span className="rating-bubble-max"> / 2500</span></span>
             <div className="rating-bubble-tail" />
@@ -201,21 +218,21 @@ function RatingModal({ onClose }: { onClose: () => void }) {
         {/* factors */}
         <div className="rating-factors">
           <div className="rating-factor">
-            <span className="rating-factor-label plus">плюс</span>
+            <span className="rating-factor-label plus">ПЛЮС</span>
             <div>
               <div className="rating-factor-title">Подарки и профиль</div>
               <div className="rating-factor-sub">100% звёзд, потраченных на покупку и улучшение подарков, номера +888 и фоны профиля.</div>
             </div>
           </div>
           <div className="rating-factor">
-            <span className="rating-factor-label plus">плюс</span>
+            <span className="rating-factor-label plus">ПЛЮС</span>
             <div>
               <div className="rating-factor-title">Маркет</div>
               <div className="rating-factor-sub">100% звёзд, потраченных на покупку подарков у других игроков.</div>
             </div>
           </div>
           <div className="rating-factor">
-            <span className="rating-factor-label plus">плюс</span>
+            <span className="rating-factor-label plus">ПЛЮС</span>
             <div>
               <div className="rating-factor-title">Пополнение баланса</div>
               <div className="rating-factor-sub">100% звёзд, зачисленных при пополнении баланса реальными деньгами.</div>
@@ -252,7 +269,10 @@ function ProfilePage({
           <div className="profile-info-card">
             <div className="profile-info-inner">
               {/* username row */}
-              <button className="profile-row">
+              <button
+                className="profile-row"
+                onClick={() => navigator.clipboard?.writeText('@treeze8')}
+              >
                 <div className="profile-row-content">
                   <div className="profile-row-label">имя пользователя</div>
                   <div className="profile-row-value link">@treeze8</div>
