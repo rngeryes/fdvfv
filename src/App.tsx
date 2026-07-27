@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
 import { motion } from 'framer-motion'
 import './App.css'
@@ -772,7 +772,7 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 const AVATAR = 'https://t.me/i/userpic/320/PJ_NMq7CXZkdOn96PPFv2KarbnQ0eS9Sz4og1T1zV6Q.svg'
 
-function ProfilePage({
+function _ProfilePage({
   onGifts: _onGifts,
   onShowRating,
   onShowUpgrade,
@@ -872,6 +872,7 @@ function ProfilePage({
     </div>
   )
 }
+const ProfilePage = memo(_ProfilePage)
 
 // ─── Gift Card Skeleton ───────────────────────────────────────────────────────
 function GiftCardSkeleton() {
@@ -910,7 +911,7 @@ function GiftCard({ gift, onClick }: { gift: Gift; onClick: () => void }) {
 }
 
 // ─── Gifts Page ───────────────────────────────────────────────────────────────
-function GiftsPage({
+function _GiftsPage({
   onBack,
   onBuy,
   isActive,
@@ -972,9 +973,10 @@ function GiftsPage({
     </div>
   )
 }
+const GiftsPage = memo(_GiftsPage)
 
 // ─── Buy Page ─────────────────────────────────────────────────────────────────
-function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
+function _BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
   const [qty, setQty] = useState(1)
   const [hideAnon, setHideAnon] = useState(false)
   const [msg, setMsg] = useState('')
@@ -1079,6 +1081,7 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
     </div>
   )
 }
+const BuyPage = memo(_BuyPage)
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
@@ -1087,14 +1090,16 @@ export default function App() {
   const [showRating, setShowRating] = useState(false)
   const [upgradeGiftId, setUpgradeGiftId] = useState<number | null>(null)
 
-  function goGifts() { setPage('gifts') }
-  function goProfile() { setPage('profile') }
-  function goBuy(g: Gift) { setSelectedGift(g); setPage('buy') }
-  function openUpgrade(giftId: number) { setUpgradeGiftId(giftId) }
-  function closeUpgrade() { setUpgradeGiftId(null) }
+  const goGifts    = useCallback(() => setPage('gifts'),   [])
+  const goProfile  = useCallback(() => setPage('profile'), [])
+  const goBuy      = useCallback((g: Gift) => { setSelectedGift(g); setPage('buy') }, [])
+  const openUpgrade  = useCallback((giftId: number) => setUpgradeGiftId(giftId), [])
+  const closeUpgrade = useCallback(() => setUpgradeGiftId(null), [])
+  const openRating   = useCallback(() => setShowRating(true),  [])
+  const closeRating  = useCallback(() => setShowRating(false), [])
 
-  const navOnGifts = page === 'gifts' ? () => {} : goGifts
-  const navOnProfile = page === 'profile' ? () => {} : page === 'buy' ? goGifts : goProfile
+  const navOnGifts   = useCallback(() => setPage('gifts'),   [])
+  const navOnProfile = useCallback(() => setPage('profile'), [])
 
   return (
     <div className="app-root">
@@ -1102,7 +1107,7 @@ export default function App() {
       <div className={`page-layer${page === 'profile' ? ' page-layer--active' : ''}`}>
         <ProfilePage
           onGifts={goGifts}
-          onShowRating={() => setShowRating(true)}
+          onShowRating={openRating}
           onShowUpgrade={openUpgrade}
         />
       </div>
@@ -1123,7 +1128,7 @@ export default function App() {
         avatarSrc={AVATAR}
       />
 
-      <RatingModal isOpen={showRating} onClose={() => setShowRating(false)} />
+      <RatingModal isOpen={showRating} onClose={closeRating} />
       <UpgradeModal
         isOpen={upgradeGiftId !== null}
         giftId={upgradeGiftId}
