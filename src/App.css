@@ -554,14 +554,8 @@
   cursor: pointer;
   transition: transform 0.15s;
   overflow: hidden;
-  animation: cardIn 0.35s ease both;
 }
 .gift-card:active { transform: scale(0.98); }
-
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 
 .gift-card-img {
   width: 88px;
@@ -1289,7 +1283,7 @@
 
 /* ── Page fade transition ── */
 .page-fade {
-  animation: pageFadeIn 0.22s ease both;
+  animation: pageFadeIn 0.25s ease both;
 }
 
 @keyframes pageFadeIn {
