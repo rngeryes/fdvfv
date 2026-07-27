@@ -763,17 +763,47 @@ function PriceSparks() {
   )
 }
 
-// ─── Storage Page (placeholder) ───────────────────────────────────────────────
-function StoragePage() {
+// ─── Storage Page ─────────────────────────────────────────────────────────────
+interface StoredNumber {
+  uid: string
+  raw: string   // '88812345678' — только цифры без пробелов
+  formatted: string  // '+888 123 456 78' — для отображения
+}
+
+function NumberCard({ num }: { num: StoredNumber }) {
+  const imgUrl = `https://nft.fragment.com/number/${num.raw}.webp`
   return (
-    <div className="placeholder-root">
-      <div className="placeholder-inner">
-        <div className="placeholder-icon">
-          <IconStorage />
-        </div>
-        <h2 className="placeholder-title">Хранилище</h2>
-        <p className="placeholder-desc">Этот раздел появится в ближайшем обновлении.</p>
+    <div className="ncard">
+      <div className="ncard-img-wrap">
+        <img src={imgUrl} alt={num.formatted} className="ncard-img" draggable={false} />
       </div>
+      <div className="ncard-info">
+        <span className="ncard-number">{num.formatted}</span>
+        <span className="ncard-label">NFT Number</span>
+      </div>
+    </div>
+  )
+}
+
+function StoragePage({ numbers }: { numbers: StoredNumber[] }) {
+  return (
+    <div className="storage-root">
+      <div className="storage-topbar">
+        <h1 className="storage-title">Хранилище</h1>
+      </div>
+      {numbers.length === 0 ? (
+        <div className="storage-empty">
+          <div className="placeholder-icon"><IconStorage /></div>
+          <p className="storage-empty-title">Хранилище пусто</p>
+          <p className="storage-empty-sub">Купленные номера +888 появятся здесь</p>
+        </div>
+      ) : (
+        <div className="storage-scroll no-scrollbar">
+          <div className="storage-grid">
+            {numbers.map(n => <NumberCard key={n.uid} num={n} />)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -879,14 +909,22 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
   )
 }
 
-function Phone888Page() {
+function Phone888Page({ onPurchase }: { onPurchase: (num: StoredNumber) => void }) {
   const [revealed, setRevealed] = useState(false)
-  // generate a random number once
-  const [number] = useState(() => {
+  // generate a random number once — 8 digits after 888
+  const [storedNum] = useState<StoredNumber>(() => {
     const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('')
-    // format: XXX XXX XX XX
-    return `${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6,8)} ${digits.slice(8)}`
+    const raw = `888${digits}`
+    // format: +888 XXX XXX XX XX
+    const formatted = `+888 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6,8)} ${digits.slice(8)}`
+    return { uid: `888-${Date.now()}-${Math.random().toString(36).slice(2)}`, raw, formatted }
   })
+
+  const handleReveal = () => {
+    haptic(15)
+    setRevealed(true)
+    onPurchase(storedNum)
+  }
 
   return (
     <div className="p888-root">
@@ -901,7 +939,9 @@ function Phone888Page() {
         <div className="p888-card">
           <span className="p888-prefix">+888</span>
           <div className="p888-number-wrap">
-            <span className={`p888-number${revealed ? ' revealed' : ''}`}>{number}</span>
+            <span className={`p888-number${revealed ? ' revealed' : ''}`}>
+              {storedNum.formatted.replace('+888 ', '')}
+            </span>
             {!revealed && <SpoilerCanvas revealed={revealed} />}
           </div>
         </div>
@@ -909,7 +949,7 @@ function Phone888Page() {
         {/* CTA */}
         <button
           className="p888-btn"
-          onClick={() => { haptic(15); setRevealed(true) }}
+          onClick={handleReveal}
           disabled={revealed}
         >
           {revealed ? (
@@ -1994,6 +2034,17 @@ export default function App() {
   // Инвентарь
   const [ownedGifts, setOwnedGifts] = useState<AnyOwnedGift[]>([])
 
+  // +888 хранилище
+  const [storedNumbers, setStoredNumbers] = useState<StoredNumber[]>([])
+
+  const handleNumberPurchase = useCallback((num: StoredNumber) => {
+    setStoredNumbers(prev => {
+      // не дублировать если уже есть (тот же uid)
+      if (prev.some(n => n.uid === num.uid)) return prev
+      return [...prev, num]
+    })
+  }, [])
+
   // Выбранный подарок для detail sheet
   const [detailGift, setDetailGift] = useState<AnyOwnedGift | null>(null)
 
@@ -2097,11 +2148,11 @@ export default function App() {
         </div>
 
         <div className={`page-layer${page === 'storage' ? ' page-layer--active' : ''}`}>
-          <StoragePage />
+          <StoragePage numbers={storedNumbers} />
         </div>
 
         <div className={`page-layer${page === 'phone888' ? ' page-layer--active' : ''}`}>
-          <Phone888Page />
+          <Phone888Page onPurchase={handleNumberPurchase} />
         </div>
 
         {/* Таббар */}
