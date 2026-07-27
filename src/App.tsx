@@ -19,6 +19,26 @@ interface Gift {
   stars: number
 }
 
+// Подарок в инвентаре — может быть неулучшенным или улучшенным
+interface OwnedGift {
+  uid: string          // уникальный id экземпляра
+  giftId: number
+  upgraded: false
+}
+
+interface UpgradedOwnedGift {
+  uid: string
+  giftId: number
+  upgraded: true
+  model: CdnModel
+  backdrop: CdnBackdrop
+  pattern: { name: string; rarityPermille: number }
+  serialNumber: number
+  giftCdnName: string
+}
+
+type AnyOwnedGift = OwnedGift | UpgradedOwnedGift
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const GIFTS: Gift[] = [
   { id: 1,  name: 'Plush Pepe',       stars: 1000 },
@@ -795,17 +815,250 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   )
 }
 
+// ─── Profile Gift Card ────────────────────────────────────────────────────────
+// Карточка в сетке профиля: неулучшенная = иконка, улучшенная = backdrop + TGS
+function ProfileGiftCard({ owned, onClick }: { owned: AnyOwnedGift; onClick: () => void }) {
+  const gift = GIFTS.find(g => g.id === owned.giftId)
+  if (!gift) return null
+
+  if (!owned.upgraded) {
+    // Неулучшенный — просто иконка без фона
+    return (
+      <div
+        className="profile-gift-cell profile-gift-cell--plain"
+        onClick={() => { haptic(); onClick() }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && (haptic(), onClick())}
+      >
+        <div className="profile-gift-img">
+          <img
+            src={GIFT_ICONS[gift.id]}
+            alt={gift.name}
+            className="profile-gift-icon"
+            draggable={false}
+          />
+        </div>
+        <div className="profile-gift-name-tag">{gift.name}</div>
+      </div>
+    )
+  }
+
+  // Улучшенный — backdrop + паттерн + TGS
+  const { backdrop, model, serialNumber, giftCdnName } = owned
+  const centerColor  = backdrop.hex.centerColor
+  const edgeColor    = backdrop.hex.edgeColor
+  const patternColor = backdrop.hex.patternColor
+  const pngUrl = `${CDN}/models/${encodeURIComponent(giftCdnName)}/png/${encodeURIComponent(model.name)}.png`
+
+  return (
+    <div
+      className="profile-gift-cell"
+      onClick={() => { haptic(); onClick() }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && (haptic(), onClick())}
+    >
+      {/* Backdrop */}
+      <div
+        className="profile-gift-backdrop"
+        style={{ background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)` }}
+      >
+        <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <filter id={`pgflt-${owned.uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+              <feFlood floodColor={patternColor} />
+              <feComposite in2="SourceGraphic" operator="in" />
+            </filter>
+            <image id={`pgpat-${owned.uid}`} x="-50" y="-50" width="100" height="100" href={pngUrl} crossOrigin="anonymous" />
+            <g id={`pggrp-${owned.uid}`}>
+              {PATTERN_TRANSFORMS.map((t, i) => (
+                <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                  <use href={`#pgpat-${owned.uid}`} />
+                </g>
+              ))}
+            </g>
+          </defs>
+          <use href={`#pggrp-${owned.uid}`} filter={`url(#pgflt-${owned.uid})`} />
+        </svg>
+      </div>
+
+      {/* TGS анимация */}
+      <div className="profile-gift-img">
+        <GiftLottie
+          giftName={giftCdnName}
+          modelName={model.name}
+          className="profile-gift-lottie"
+        />
+      </div>
+
+      {/* Ribbon с номером */}
+      <div className="profile-gift-ribbon" style={{
+        background: `linear-gradient(225deg, ${edgeColor} 0%, ${centerColor} 100%)`
+      }}>
+        <span>#{serialNumber}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Gift Detail Sheet ────────────────────────────────────────────────────────
+function GiftDetailSheet({
+  owned,
+  isOpen,
+  onClose,
+  onUpgrade,
+}: {
+  owned: AnyOwnedGift | null
+  isOpen: boolean
+  onClose: () => void
+  onUpgrade: () => void
+}) {
+  const gift = owned ? GIFTS.find(g => g.id === owned.giftId) : null
+
+  return (
+    <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
+      <div className="modal-sheet gift-detail-sheet" onClick={e => e.stopPropagation()}>
+        {owned && gift && (
+          <>
+            {/* Шапка с backdrop или просто иконка */}
+            <div className="gift-detail-header">
+              <button
+                className="modal-close-btn"
+                style={{ position: 'absolute', left: 8, top: 8, zIndex: 5 }}
+                onClick={() => { haptic(); onClose() }}
+              >
+                <IconClose />
+              </button>
+
+              {owned.upgraded ? (
+                <>
+                  <div
+                    className="gift-detail-backdrop"
+                    style={{
+                      background: `radial-gradient(50% 65% at 50% 35%, ${owned.backdrop.hex.centerColor} 0%, ${owned.backdrop.hex.edgeColor} 100%)`
+                    }}
+                  >
+                    <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+                      <defs>
+                        <filter id="gdflt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+                          <feFlood floodColor={owned.backdrop.hex.patternColor} />
+                          <feComposite in2="SourceGraphic" operator="in" />
+                        </filter>
+                        <image id="gdpat" x="-50" y="-50" width="100" height="100"
+                          href={`${CDN}/models/${encodeURIComponent(owned.giftCdnName)}/png/${encodeURIComponent(owned.model.name)}.png`}
+                          crossOrigin="anonymous" />
+                        <g id="gdgrp">
+                          {PATTERN_TRANSFORMS.map((t, i) => (
+                            <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                              <use href="#gdpat" />
+                            </g>
+                          ))}
+                        </g>
+                      </defs>
+                      <use href="#gdgrp" filter="url(#gdflt)" />
+                    </svg>
+                  </div>
+                  <div className="gift-detail-lottie-wrap">
+                    <GiftLottie giftName={owned.giftCdnName} modelName={owned.model.name} className="gift-detail-lottie" />
+                  </div>
+                  <div className="upgrade-model-badge" style={{ position: 'relative', zIndex: 3, marginTop: 'auto' }}>
+                    {gift.name} #{owned.serialNumber}
+                  </div>
+                </>
+              ) : (
+                <div className="gift-detail-plain-wrap">
+                  <img src={GIFT_ICONS[gift.id]} alt={gift.name} className="gift-detail-plain-icon" draggable={false} />
+                  <div className="upgrade-model-badge" style={{ position: 'relative', zIndex: 3, marginTop: 12 }}>
+                    {gift.name}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Таблица атрибутов — только для улучшенных */}
+            {owned.upgraded && (
+              <div className="upgrade-result-table" style={{ margin: '12px 16px 0' }}>
+                <div className="upgrade-result-row">
+                  <span className="upgrade-result-key">Модель</span>
+                  <span className="upgrade-result-val">
+                    {owned.model.name}
+                    <span className="upgrade-rarity-badge">{rarityLabel(owned.model.rarityPermille)}</span>
+                  </span>
+                </div>
+                <div className="upgrade-result-row">
+                  <span className="upgrade-result-key">Узор</span>
+                  <span className="upgrade-result-val">
+                    {owned.pattern.name}
+                    <span className="upgrade-rarity-badge">{rarityLabel(owned.pattern.rarityPermille)}</span>
+                  </span>
+                </div>
+                <div className="upgrade-result-row">
+                  <span className="upgrade-result-key">Фон</span>
+                  <span className="upgrade-result-val">
+                    {owned.backdrop.name}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Кнопки действий */}
+            <div className="gift-detail-actions">
+              {!owned.upgraded && (
+                <button
+                  className="gift-detail-action-btn gift-detail-action-btn--primary"
+                  onClick={() => { haptic(15); onClose(); setTimeout(onUpgrade, 300) }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 13 L12 7.5 L18 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M6 16.5 L12 11 L18 16.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Улучшить
+                </button>
+              )}
+              <button
+                className="gift-detail-action-btn"
+                onClick={() => haptic()}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 4 H12 L15 7 L9 14 L3 8 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                  <path d="M14 16 H21 M18 13 L21 16 L18 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Передать
+              </button>
+              {owned.upgraded && (
+                <button
+                  className="gift-detail-action-btn"
+                  onClick={() => haptic()}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 13 L11 21 L21 11 V3 H13 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                    <circle cx="16.5" cy="7.5" r="1.4" fill="currentColor"/>
+                  </svg>
+                  Продать
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 const AVATAR = 'https://t.me/i/userpic/320/PJ_NMq7CXZkdOn96PPFv2KarbnQ0eS9Sz4og1T1zV6Q.svg'
 
 function _ProfilePage({
   onGifts: _onGifts,
   onShowRating,
-  onShowUpgrade,
+  ownedGifts,
+  onSelectGift,
 }: {
   onGifts: () => void
   onShowRating: () => void
-  onShowUpgrade: (giftId: number) => void
+  ownedGifts: AnyOwnedGift[]
+  onSelectGift: (owned: AnyOwnedGift) => void
 }) {
   return (
     <div className="profile-root">
@@ -833,33 +1086,22 @@ function _ProfilePage({
           </div>
 
           <div className="profile-gifts-area">
-            <div className="profile-gifts-grid">
-              {GIFTS.map(gift => (
-                <div
-                  key={gift.id}
-                  className="profile-gift-cell"
-                  onClick={() => { haptic(); onShowUpgrade(gift.id) }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && (haptic(), onShowUpgrade(gift.id))}
-                >
-                  <div className="profile-gift-backdrop" style={{ background: '#1C1C1D' }} />
-                  <div className="profile-gift-img">
-                    {GIFT_ICONS[gift.id] ? (
-                      <img
-                        src={GIFT_ICONS[gift.id]}
-                        alt={gift.name}
-                        className="profile-gift-icon"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="profile-gift-icon" style={{ background: '#2a2a2a', borderRadius: 12 }} />
-                    )}
-                  </div>
-                  <div className="profile-gift-ribbon"><span>#{gift.id}</span></div>
-                </div>
-              ))}
-            </div>
+            {ownedGifts.length === 0 ? (
+              <div className="profile-gifts-empty">
+                <p>У вас пока нет подарков</p>
+                <p className="profile-gifts-empty-sub">Купите подарок в магазине</p>
+              </div>
+            ) : (
+              <div className="profile-gifts-grid">
+                {ownedGifts.map(owned => (
+                  <ProfileGiftCard
+                    key={owned.uid}
+                    owned={owned}
+                    onClick={() => onSelectGift(owned)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1002,12 +1244,9 @@ function _GiftsPage({
 const GiftsPage = memo(_GiftsPage)
 
 // ─── Buy Page ─────────────────────────────────────────────────────────────────
-function _BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
-  const [qty, setQty] = useState(1)
+function _BuyPage({ gift, onBack, onBought }: { gift: Gift; onBack: () => void; onBought: (gift: Gift) => void }) {
   const [hideAnon, setHideAnon] = useState(false)
   const [msg, setMsg] = useState('')
-
-  const total = gift.stars * qty
   const iconSrc = GIFT_ICONS[gift.id]
 
   return (
@@ -1041,12 +1280,11 @@ function _BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
               </div>
               <div className="buy-card-gift-name">{gift.name}</div>
               <div className="buy-card-gift-desc">
-                Уникальный подарок. Можно отправить другу или сохранить в профиле.
+                Уникальный подарок. Можно улучшить до коллекционного и сохранить в профиле.
               </div>
-              <div className="buy-card-view-btn">Посмотреть</div>
             </div>
             <div className="buy-card-ribbon">
-              <div className="buy-card-ribbon-inner">101 из 3&nbsp;000</div>
+              <div className="buy-card-ribbon-inner">3&nbsp;000 шт.</div>
             </div>
           </div>
           <div className="buy-msg-wrap">
@@ -1081,26 +1319,16 @@ function _BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
         </div>
         <p className="buy-toggle-hint">Скрыть моё имя и сообщение от посетителей профиля.</p>
 
-        <div className="buy-avail-bar-wrap">
-          <div className="buy-avail-bar">
-            <div className="buy-avail-fill" style={{ width: '96.7%' }} />
-            <span className="buy-avail-left">2&nbsp;900 осталось</span>
-            <span className="buy-avail-right">100 продано</span>
-          </div>
-        </div>
-        <p className="buy-avail-hint">Когда все подарки будут проданы, вы больше не сможете их купить.</p>
-
         <div style={{ height: 160 }} />
       </div>
 
       <div className="buy-action-bar">
-        <div className="buy-qty-control">
-          <button className="buy-qty-btn" onClick={() => { haptic(); setQty(q => Math.max(1, q - 1)) }} disabled={qty <= 1}>−</button>
-          <span className="buy-qty-val">{qty}</span>
-          <button className="buy-qty-btn" onClick={() => { haptic(); setQty(q => q + 1) }}>+</button>
-        </div>
-        <button className="buy-confirm-btn" onClick={() => haptic(15)}>
-          Купить за&nbsp;<IconStar size={19} /><span>&nbsp;{total.toLocaleString('ru')}</span>
+        <button
+          className="buy-confirm-btn"
+          style={{ flex: 1 }}
+          onClick={() => { haptic(15); onBought(gift) }}
+        >
+          Получить бесплатно
         </button>
       </div>
 
@@ -1114,27 +1342,76 @@ export default function App() {
   const [page, setPage] = useState<Page>('profile')
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null)
   const [showRating, setShowRating] = useState(false)
-  const [upgradeGiftId, setUpgradeGiftId] = useState<number | null>(null)
+
+  // Инвентарь — все купленные подарки
+  const [ownedGifts, setOwnedGifts] = useState<AnyOwnedGift[]>([])
+
+  // Выбранный подарок для detail sheet
+  const [detailGift, setDetailGift] = useState<AnyOwnedGift | null>(null)
+
+  // Upgrade modal — uid подарка который улучшаем
+  const [upgradeUid, setUpgradeUid] = useState<string | null>(null)
+
+  const upgradeTarget = upgradeUid ? ownedGifts.find(o => o.uid === upgradeUid) ?? null : null
+  const upgradeGiftId = upgradeTarget ? upgradeTarget.giftId : null
 
   const goGifts    = useCallback(() => setPage('gifts'),   [])
   const goProfile  = useCallback(() => setPage('profile'), [])
   const goBuy      = useCallback((g: Gift) => { setSelectedGift(g); setPage('buy') }, [])
-  const openUpgrade  = useCallback((giftId: number) => setUpgradeGiftId(giftId), [])
-  const closeUpgrade = useCallback(() => setUpgradeGiftId(null), [])
   const openRating   = useCallback(() => setShowRating(true),  [])
   const closeRating  = useCallback(() => setShowRating(false), [])
-
   const navOnGifts   = useCallback(() => setPage('gifts'),   [])
   const navOnProfile = useCallback(() => setPage('profile'), [])
 
+  // Купить — добавляем в инвентарь и идём в профиль
+  const handleBought = useCallback((gift: Gift) => {
+    const uid = `${gift.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    setOwnedGifts(prev => [...prev, { uid, giftId: gift.id, upgraded: false }])
+    setPage('profile')
+  }, [])
+
+  // Открыть detail sheet
+  const handleSelectGift = useCallback((owned: AnyOwnedGift) => {
+    setDetailGift(owned)
+  }, [])
+
+  // Открыть улучшение из detail sheet
+  const handleUpgradeFromDetail = useCallback(() => {
+    if (!detailGift) return
+    setUpgradeUid(detailGift.uid)
+    setDetailGift(null)
+  }, [detailGift])
+
+  // После улучшения — заменяем запись в инвентаре
+  const handleUpgraded = useCallback((result: UpgradeResult) => {
+    if (!upgradeUid) return
+    setOwnedGifts(prev => prev.map(o => {
+      if (o.uid !== upgradeUid) return o
+      const upgraded: UpgradedOwnedGift = {
+        uid: o.uid,
+        giftId: o.giftId,
+        upgraded: true,
+        model: result.model,
+        backdrop: result.backdrop,
+        pattern: result.pattern,
+        serialNumber: result.serialNumber,
+        giftCdnName: result.giftName,
+      }
+      return upgraded
+    }))
+  }, [upgradeUid])
+
+  const closeUpgrade = useCallback(() => setUpgradeUid(null), [])
+  const closeDetail  = useCallback(() => setDetailGift(null), [])
+
   return (
     <div className="app-root">
-      {/* Все страницы живут одновременно, переключение через opacity */}
       <div className={`page-layer${page === 'profile' ? ' page-layer--active' : ''}`}>
         <ProfilePage
           onGifts={goGifts}
           onShowRating={openRating}
-          onShowUpgrade={openUpgrade}
+          ownedGifts={ownedGifts}
+          onSelectGift={handleSelectGift}
         />
       </div>
 
@@ -1143,7 +1420,9 @@ export default function App() {
       </div>
 
       <div className={`page-layer${page === 'buy' ? ' page-layer--active' : ''}`}>
-        {selectedGift && <BuyPage gift={selectedGift} onBack={goGifts} />}
+        {selectedGift && (
+          <BuyPage gift={selectedGift} onBack={goGifts} onBought={handleBought} />
+        )}
       </div>
 
       {/* Таббар — поверх всего, без анимации */}
@@ -1155,11 +1434,19 @@ export default function App() {
       />
 
       <RatingModal isOpen={showRating} onClose={closeRating} />
+
+      <GiftDetailSheet
+        owned={detailGift}
+        isOpen={detailGift !== null}
+        onClose={closeDetail}
+        onUpgrade={handleUpgradeFromDetail}
+      />
+
       <UpgradeModal
-        isOpen={upgradeGiftId !== null}
+        isOpen={upgradeUid !== null}
         giftId={upgradeGiftId}
         onClose={closeUpgrade}
-        onUpgraded={() => {}}
+        onUpgraded={handleUpgraded}
       />
     </div>
   )
