@@ -1270,7 +1270,7 @@ function _ProfilePage({
   return (
     <div className="profile-root">
       <div className="profile-scroll no-scrollbar">
-        <div style={{ height: 'calc(var(--page-pt, 0px) + 264px)' }} aria-hidden="true" />
+        <div style={{ height: 'calc(var(--page-pt, 0px) + 5px)' }} aria-hidden="true" />
 
         <div style={{ minHeight: '100dvh' }}>
           <div className="profile-info-card">
