@@ -1297,9 +1297,9 @@ function getTgUser(): TelegramUser | null {
 }
 
 function getTgDisplayName(user: ReturnType<typeof getTgUser>): string {
-  if (!user) return 'username'
+  if (!user) return ''
   const parts = [user.first_name, user.last_name].filter(Boolean)
-  return parts.length > 0 ? parts.join(' ') : (user.username ?? 'username')
+  return parts.length > 0 ? parts.join(' ') : (user.username ?? '')
 }
 
 function getTgUsername(user: ReturnType<typeof getTgUser>): string | null {
@@ -1356,9 +1356,9 @@ function AvatarImg({
           flexShrink: 0,
           ...style,
         }}
-        aria-label={name}
+        aria-label={name || 'Avatar'}
       >
-        {initials || '?'}
+        {initials || null}
       </span>
     )
   }
@@ -1413,18 +1413,18 @@ function _ProfilePage({
         <div style={{ minHeight: '100dvh' }}>
           <div className="profile-info-card">
             <div className="profile-info-inner">
-              {username && (
-                <button
-                  className="profile-row"
-                  onClick={() => { haptic(); navigator.clipboard?.writeText(username) }}
-                >
-                  <div className="profile-row-content">
-                    <div className="profile-row-label">имя пользователя</div>
-                    <div className="profile-row-value link">{username}</div>
+              <button
+                className="profile-row"
+                onClick={() => { haptic(); navigator.clipboard?.writeText(username ?? displayName) }}
+              >
+                <div className="profile-row-content">
+                  <div className="profile-row-label">имя пользователя</div>
+                  <div className="profile-row-value link">
+                    {username ?? displayName ?? '—'}
                   </div>
-                  <IconCopy />
-                </button>
-              )}
+                </div>
+                <IconCopy />
+              </button>
               <div className="profile-row-static">
                 <div className="profile-row-label">био</div>
                 <button className="profile-row-value muted">Добавьте описание</button>
@@ -1767,12 +1767,22 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [sparksEnabled, setSparksEnabled] = useState(true)
 
-  // Telegram user
-  const [tgUser] = useState(() => {
+  // Telegram user — читаем после ready(), потом ещё раз через useEffect на случай задержки
+  const [tgUser, setTgUser] = useState<TelegramUser | null>(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(window as any)?.Telegram?.WebApp?.ready?.()
-    return getTgUser()
+    const tg = (window as any)?.Telegram?.WebApp
+    tg?.ready?.()
+    return tg?.initDataUnsafe?.user ?? null
   })
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tg = (window as any)?.Telegram?.WebApp
+    if (!tg) return
+    tg.ready?.()
+    const user = tg.initDataUnsafe?.user ?? null
+    if (user) setTgUser(user)
+  }, [])
 
   const tgAvatarSrc  = getTgAvatarSrc(tgUser)
   const tgDisplayName = getTgDisplayName(tgUser)
