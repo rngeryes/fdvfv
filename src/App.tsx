@@ -1770,17 +1770,14 @@ export default function App() {
   // Telegram user — читаем после ready(), потом ещё раз через useEffect на случай задержки
   const [tgUser, setTgUser] = useState<TelegramUser | null>(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tg = (window as any)?.Telegram?.WebApp
-    tg?.ready?.()
-    return tg?.initDataUnsafe?.user ?? null
+    return (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user ?? null
   })
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tg = (window as any)?.Telegram?.WebApp
-    if (!tg) return
-    tg.ready?.()
-    const user = tg.initDataUnsafe?.user ?? null
+    const user = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user ?? null
+    // eslint-disable-next-line no-console
+    console.log('[TG] initDataUnsafe.user:', user)
     if (user) setTgUser(user)
   }, [])
 
