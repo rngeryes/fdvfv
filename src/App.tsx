@@ -782,7 +782,7 @@ function ProfilePage({
   onShowUpgrade: (giftId: number) => void
 }) {
   return (
-    <div className="profile-root page-fade">
+    <div className="profile-root">
       <div className="profile-scroll no-scrollbar">
         <div style={{ height: 'calc(var(--page-pt, 0px) + 5px)' }} aria-hidden="true" />
 
@@ -925,7 +925,7 @@ function GiftsPage({
   }, [])
 
   return (
-    <div className="gifts-root page-fade">
+    <div className="gifts-root">
       <div className="gifts-glow-bg" aria-hidden="true" />
 
       <div className="gifts-topbar">
@@ -972,7 +972,7 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
   const iconSrc = GIFT_ICONS[gift.id]
 
   return (
-    <div className="buy-root page-fade">
+    <div className="buy-root">
       <div className="buy-pattern-bg" aria-hidden="true">
         <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" className="buy-pattern-svg">
           {Array.from({ length: 8 }).map((_, row) =>
@@ -1082,27 +1082,29 @@ export default function App() {
   function openUpgrade(giftId: number) { setUpgradeGiftId(giftId) }
   function closeUpgrade() { setUpgradeGiftId(null) }
 
-  // Таббар: onGifts и onProfile зависят от текущей страницы
   const navOnGifts = page === 'gifts' ? () => {} : goGifts
   const navOnProfile = page === 'profile' ? () => {} : page === 'buy' ? goGifts : goProfile
 
   return (
     <div className="app-root">
-      {page === 'profile' && (
+      {/* Все страницы живут одновременно, переключение через opacity */}
+      <div className={`page-layer${page === 'profile' ? ' page-layer--active' : ''}`}>
         <ProfilePage
           onGifts={goGifts}
           onShowRating={() => setShowRating(true)}
           onShowUpgrade={openUpgrade}
         />
-      )}
-      {page === 'gifts' && (
-        <GiftsPage onBack={goProfile} onBuy={goBuy} />
-      )}
-      {page === 'buy' && selectedGift && (
-        <BuyPage gift={selectedGift} onBack={goGifts} />
-      )}
+      </div>
 
-      {/* Таббар вне fade-зоны — не анимируется */}
+      <div className={`page-layer${page === 'gifts' ? ' page-layer--active' : ''}`}>
+        <GiftsPage onBack={goProfile} onBuy={goBuy} />
+      </div>
+
+      <div className={`page-layer${page === 'buy' ? ' page-layer--active' : ''}`}>
+        {selectedGift && <BuyPage gift={selectedGift} onBack={goGifts} />}
+      </div>
+
+      {/* Таббар — поверх всего, без анимации */}
       <BottomNav
         page={page === 'buy' ? 'gifts' : page}
         onGifts={navOnGifts}
