@@ -1,7 +1,11 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, memo, createContext, useContext } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
 import { motion } from 'framer-motion'
 import './App.css'
+
+// ─── Sparkles context ─────────────────────────────────────────────────────────
+const SparklesCtx = createContext<boolean>(true)
+function useSparks() { return useContext(SparklesCtx) }
 
 // ─── Haptic utility ───────────────────────────────────────────────────────────
 function haptic(duration = 10) {
@@ -12,6 +16,14 @@ function haptic(duration = 10) {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Page = 'profile' | 'gifts' | 'buy'
+
+// Worn gift state — used for profile bg + nickname badge
+interface WornGift {
+  uid: string
+  giftCdnName: string
+  modelName: string
+  backdrop: CdnBackdrop
+}
 
 interface Gift {
   id: number
@@ -662,6 +674,9 @@ function LevelBadge({ color = '#2EA6FF' }: { color?: string }) {
 
 // ─── Sparks for price ────────────────────────────────────────────────────────
 function PriceSparks() {
+  const sparksEnabled = useSparks()
+  if (!sparksEnabled) return null
+
   const sparks = [
     { left: '26.922%', bottom: '56.899%', width: '1.5632px', height: '1.5632px', delay: '1.12414s', dx: '-3.794276486690631px', dy: '-6.256526037605882px', dur: '1.797246836738998s' },
     { left: '42.230%', bottom: '16.183%', width: '2.15898px', height: '2.15898px', delay: '1.03965s', dx: '1.386141329589334px', dy: '5.8782074872611005px', dur: '1.964935769606515s' },
@@ -844,7 +859,7 @@ function ProfileGiftCard({ owned, onClick }: { owned: AnyOwnedGift; onClick: () 
     )
   }
 
-  // Улучшенный — backdrop + паттерн + TGS
+  // Улучшенный — backdrop + паттерн + PNG (TGS только в модалке)
   const { backdrop, model, serialNumber, giftCdnName } = owned
   const centerColor  = backdrop.hex.centerColor
   const edgeColor    = backdrop.hex.edgeColor
@@ -883,12 +898,14 @@ function ProfileGiftCard({ owned, onClick }: { owned: AnyOwnedGift; onClick: () 
         </svg>
       </div>
 
-      {/* TGS анимация */}
+      {/* PNG статичное изображение в сетке */}
       <div className="profile-gift-img">
-        <GiftLottie
-          giftName={giftCdnName}
-          modelName={model.name}
+        <img
+          src={pngUrl}
+          alt={model.name}
           className="profile-gift-lottie"
+          style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+          draggable={false}
         />
       </div>
 
@@ -902,145 +919,323 @@ function ProfileGiftCard({ owned, onClick }: { owned: AnyOwnedGift; onClick: () 
   )
 }
 
-// ─── Gift Detail Sheet ────────────────────────────────────────────────────────
+// ─── Gift Detail Sheet — 555-style ───────────────────────────────────────────
 function GiftDetailSheet({
   owned,
   isOpen,
   onClose,
   onUpgrade,
+  onWear,
+  onUnwear,
+  wornUid,
 }: {
   owned: AnyOwnedGift | null
   isOpen: boolean
   onClose: () => void
   onUpgrade: () => void
+  onWear: (owned: UpgradedOwnedGift) => void
+  onUnwear: () => void
+  wornUid: string | null
 }) {
   const gift = owned ? GIFTS.find(g => g.id === owned.giftId) : null
+  const isWorn = owned ? owned.uid === wornUid : false
+
+  if (!owned || !gift) {
+    return (
+      <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
+        <div className="modal-sheet gift-detail-sheet" onClick={e => e.stopPropagation()} />
+      </div>
+    )
+  }
+
+  const upgraded = owned.upgraded ? (owned as UpgradedOwnedGift) : null
+  const centerColor = upgraded ? upgraded.backdrop.hex.centerColor : '#363738'
+  const edgeColor   = upgraded ? upgraded.backdrop.hex.edgeColor   : '#1a1a1c'
+  const patternColor = upgraded ? upgraded.backdrop.hex.patternColor : '#555'
+  const pngUrl = upgraded
+    ? `${CDN}/models/${encodeURIComponent(upgraded.giftCdnName)}/png/${encodeURIComponent(upgraded.model.name)}.png`
+    : null
+
+  // action button bg
+  const btnBg = upgraded
+    ? `color-mix(in srgb, ${edgeColor} 80%, white)`
+    : '#2a2a2e'
 
   return (
     <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
-      <div className="modal-sheet gift-detail-sheet" onClick={e => e.stopPropagation()}>
-        {owned && gift && (
-          <>
-            {/* Шапка с backdrop или просто иконка */}
-            <div className="gift-detail-header">
-              <button
-                className="modal-close-btn"
-                style={{ position: 'absolute', left: 8, top: 8, zIndex: 5 }}
-                onClick={() => { haptic(); onClose() }}
-              >
-                <IconClose />
-              </button>
-
-              {owned.upgraded ? (
-                <>
-                  <div
-                    className="gift-detail-backdrop"
-                    style={{
-                      background: `radial-gradient(50% 65% at 50% 35%, ${owned.backdrop.hex.centerColor} 0%, ${owned.backdrop.hex.edgeColor} 100%)`
-                    }}
-                  >
-                    <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
-                      <defs>
-                        <filter id="gdflt" filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
-                          <feFlood floodColor={owned.backdrop.hex.patternColor} />
-                          <feComposite in2="SourceGraphic" operator="in" />
-                        </filter>
-                        <image id="gdpat" x="-50" y="-50" width="100" height="100"
-                          href={`${CDN}/models/${encodeURIComponent(owned.giftCdnName)}/png/${encodeURIComponent(owned.model.name)}.png`}
-                          crossOrigin="anonymous" />
-                        <g id="gdgrp">
-                          {PATTERN_TRANSFORMS.map((t, i) => (
-                            <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
-                              <use href="#gdpat" />
-                            </g>
-                          ))}
-                        </g>
-                      </defs>
-                      <use href="#gdgrp" filter="url(#gdflt)" />
-                    </svg>
-                  </div>
-                  <div className="gift-detail-lottie-wrap">
-                    <GiftLottie giftName={owned.giftCdnName} modelName={owned.model.name} className="gift-detail-lottie" />
-                  </div>
-                  <div className="upgrade-model-badge" style={{ position: 'relative', zIndex: 3, marginTop: 'auto' }}>
-                    {gift.name} #{owned.serialNumber}
-                  </div>
-                </>
-              ) : (
-                <div className="gift-detail-plain-wrap">
-                  <img src={GIFT_ICONS[gift.id]} alt={gift.name} className="gift-detail-plain-icon" draggable={false} />
-                  <div className="upgrade-model-badge" style={{ position: 'relative', zIndex: 3, marginTop: 12 }}>
-                    {gift.name}
-                  </div>
-                </div>
-              )}
+      <div
+        className="modal-sheet gift-detail-sheet-555"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gd-title"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header with backdrop ── */}
+        <div className="gd-header">
+          {/* Backdrop bg */}
+          {upgraded ? (
+            <div
+              className="gd-backdrop"
+              style={{ background: `radial-gradient(50% 65% at 50% 35%, ${centerColor} 0%, ${edgeColor} 100%)` }}
+            >
+              <svg width="100%" height="100%" viewBox="0 0 416 416" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <filter id={`gdflt555-${owned.uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+                    <feFlood floodColor={patternColor} />
+                    <feComposite in2="SourceGraphic" operator="in" />
+                  </filter>
+                  <image id={`gdpat555-${owned.uid}`} x="-50" y="-50" width="100" height="100" href={pngUrl!} crossOrigin="anonymous" />
+                  <g id={`gdgrp555-${owned.uid}`}>
+                    {PATTERN_TRANSFORMS.map((t, i) => (
+                      <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                        <use href={`#gdpat555-${owned.uid}`} />
+                      </g>
+                    ))}
+                  </g>
+                </defs>
+                <use href={`#gdgrp555-${owned.uid}`} filter={`url(#gdflt555-${owned.uid})`} />
+              </svg>
             </div>
+          ) : (
+            <div className="gd-backdrop" style={{ background: '#1a1a1c' }} />
+          )}
 
-            {/* Таблица атрибутов — только для улучшенных */}
-            {owned.upgraded && (
-              <div className="upgrade-result-table" style={{ margin: '12px 16px 0' }}>
-                <div className="upgrade-result-row">
-                  <span className="upgrade-result-key">Модель</span>
-                  <span className="upgrade-result-val">
-                    {owned.model.name}
-                    <span className="upgrade-rarity-badge">{rarityLabel(owned.model.rarityPermille)}</span>
-                  </span>
-                </div>
-                <div className="upgrade-result-row">
-                  <span className="upgrade-result-key">Узор</span>
-                  <span className="upgrade-result-val">
-                    {owned.pattern.name}
-                    <span className="upgrade-rarity-badge">{rarityLabel(owned.pattern.rarityPermille)}</span>
-                  </span>
-                </div>
-                <div className="upgrade-result-row">
-                  <span className="upgrade-result-key">Фон</span>
-                  <span className="upgrade-result-val">
-                    {owned.backdrop.name}
-                  </span>
-                </div>
-              </div>
+          {/* Controls */}
+          <div className="gd-controls">
+            <button
+              className="gd-ctrl-btn"
+              aria-label="Закрыть"
+              onClick={() => { haptic(); onClose() }}
+            >
+              <IconClose />
+            </button>
+            {/* dots menu placeholder */}
+            <button className="gd-ctrl-btn" aria-label="Меню">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="3" cy="8" r="1.4" fill="currentColor"/>
+                <circle cx="8" cy="8" r="1.4" fill="currentColor"/>
+                <circle cx="13" cy="8" r="1.4" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* TGS / icon */}
+          <div className="gd-lottie-wrap">
+            {upgraded ? (
+              <GiftLottie
+                giftName={upgraded.giftCdnName}
+                modelName={upgraded.model.name}
+                className="gd-lottie"
+              />
+            ) : (
+              <img
+                src={GIFT_ICONS[gift.id]}
+                alt={gift.name}
+                className="gd-plain-icon"
+                draggable={false}
+              />
+            )}
+          </div>
+
+          {/* Title */}
+          <h2 id="gd-title" className="gd-title">
+            {gift.name}
+            {upgraded && (
+              <span className="gd-serial"> #{upgraded.serialNumber}</span>
+            )}
+          </h2>
+
+          {/* Action buttons row — like 555 */}
+          <div className="gd-actions-row">
+            {/* Transfer */}
+            <button
+              className="gd-action-btn"
+              style={{ background: btnBg }}
+              onClick={() => haptic()}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M5 4 H12 L15 7 L9 14 L3 8 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="rgba(255,255,255,0.08)"/>
+                <path d="M14 16 H21 M18 13 L21 16 L18 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Передать</span>
+            </button>
+
+            {/* Wear / Unwear */}
+            {upgraded && (
+              <button
+                className="gd-action-btn"
+                style={{ background: btnBg }}
+                onClick={() => {
+                  haptic()
+                  if (isWorn) { onUnwear() } else { onWear(upgraded) }
+                  onClose()
+                }}
+              >
+                {isWorn ? (
+                  <>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 9 L7 13 L12 6 L17 13 L21 9 L19 18 H5 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                      <path d="M3 3 L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                    <span>Снять</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 9 L7 13 L12 6 L17 13 L21 9 L19 18 H5 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Носить</span>
+                  </>
+                )}
+              </button>
             )}
 
-            {/* Кнопки действий */}
-            <div className="gift-detail-actions">
-              {!owned.upgraded && (
-                <button
-                  className="gift-detail-action-btn gift-detail-action-btn--primary"
-                  onClick={() => { haptic(15); onClose(); setTimeout(onUpgrade, 300) }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 13 L12 7.5 L18 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M6 16.5 L12 11 L18 16.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Улучшить
-                </button>
-              )}
+            {/* Sell */}
+            {upgraded && (
               <button
-                className="gift-detail-action-btn"
+                className="gd-action-btn"
+                style={{ background: btnBg }}
                 onClick={() => haptic()}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 4 H12 L15 7 L9 14 L3 8 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-                  <path d="M14 16 H21 M18 13 L21 16 L18 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 13 L11 21 L21 11 V3 H13 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                  <circle cx="16.5" cy="7.5" r="1.4" fill="currentColor"/>
                 </svg>
-                Передать
+                <span>Продать</span>
               </button>
-              {owned.upgraded && (
-                <button
-                  className="gift-detail-action-btn"
-                  onClick={() => haptic()}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 13 L11 21 L21 11 V3 H13 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-                    <circle cx="16.5" cy="7.5" r="1.4" fill="currentColor"/>
-                  </svg>
-                  Продать
-                </button>
+            )}
+
+            {/* Upgrade (for non-upgraded) */}
+            {!upgraded && (
+              <button
+                className="gd-action-btn"
+                style={{ background: '#0C8AFF' }}
+                onClick={() => { haptic(15); onClose(); setTimeout(onUpgrade, 300) }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 13 L12 7.5 L18 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M6 16.5 L12 11 L18 16.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Улучшить</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Attributes table — 555 style ── */}
+        <div className="gd-attr-table">
+          {/* Owner row */}
+          <div className="gd-attr-row">
+            <span className="gd-attr-key">Владелец</span>
+            <span className="gd-attr-val gd-attr-val--owner">
+              <img src={AVATAR} alt="Avatar" className="gd-owner-avatar" />
+              <button className="gd-owner-name">username</button>
+              {upgraded && (
+                <span className="gd-worn-badge">
+                  <GiftLottie
+                    giftName={upgraded.giftCdnName}
+                    modelName={upgraded.model.name}
+                    className="gd-worn-tgs"
+                  />
+                </span>
               )}
+            </span>
+          </div>
+
+          {upgraded && (
+            <>
+              <div className="gd-attr-row">
+                <span className="gd-attr-key">Модель</span>
+                <span className="gd-attr-val">
+                  <span className="gd-attr-text">{upgraded.model.name}</span>
+                  <span className="upgrade-rarity-badge">{rarityLabel(upgraded.model.rarityPermille)}</span>
+                </span>
+              </div>
+              <div className="gd-attr-row">
+                <span className="gd-attr-key">Узор</span>
+                <span className="gd-attr-val">
+                  <span className="gd-attr-text">{upgraded.pattern.name}</span>
+                  <span className="upgrade-rarity-badge">{rarityLabel(upgraded.pattern.rarityPermille)}</span>
+                </span>
+              </div>
+              <div className="gd-attr-row">
+                <span className="gd-attr-key">Фон</span>
+                <span className="gd-attr-val">
+                  <span className="gd-attr-text">{upgraded.backdrop.name}</span>
+                  <span className="upgrade-rarity-badge">{rarityLabel(10)}</span>
+                </span>
+              </div>
+              <div className="gd-attr-row">
+                <span className="gd-attr-key">Наличие</span>
+                <span className="gd-attr-val">
+                  <span className="gd-attr-text">{upgraded.serialNumber} из 33&nbsp;333</span>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Visibility hint */}
+        <div className="gd-visibility-hint">
+          Подарок виден в профиле.{' '}
+          <button className="gd-hint-link" onClick={() => haptic()}>Скрыть</button>
+        </div>
+
+        {/* OK button */}
+        <div className="gd-ok-wrap">
+          <button className="gd-ok-btn" onClick={() => { haptic(); onClose() }}>OK</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Settings Modal ───────────────────────────────────────────────────────────
+function SettingsModal({
+  isOpen,
+  onClose,
+  sparksEnabled,
+  onToggleSparks,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  sparksEnabled: boolean
+  onToggleSparks: () => void
+}) {
+  return (
+    <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <button className="modal-close-btn" onClick={() => { haptic(); onClose() }}><IconClose /></button>
+          <span className="modal-title">Настройки</span>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-label">ПОДАРКИ</div>
+          <div className="buy-toggle-card" style={{ margin: 0 }}>
+            <div
+              className="buy-toggle-row"
+              role="button"
+              tabIndex={0}
+              onClick={() => { haptic(); onToggleSparks() }}
+              onKeyDown={e => e.key === 'Enter' && (haptic(), onToggleSparks())}
+            >
+              <span className="buy-toggle-label">Искры у цены</span>
+              <button
+                role="switch"
+                aria-checked={sparksEnabled}
+                aria-label="Искры у цены"
+                className={`toggle-switch${sparksEnabled ? ' on' : ''}`}
+                onClick={e => { e.stopPropagation(); haptic(); onToggleSparks() }}
+              >
+                <span className="toggle-thumb" />
+              </button>
             </div>
-          </>
-        )}
+          </div>
+          <p className="buy-toggle-hint">Анимация искр рядом с ценой подарков.</p>
+        </div>
+
+        <button className="rating-ok-btn" style={{ marginTop: 24 }} onClick={() => { haptic(); onClose() }}>Готово</button>
       </div>
     </div>
   )
@@ -1052,18 +1247,30 @@ const AVATAR = 'https://t.me/i/userpic/320/PJ_NMq7CXZkdOn96PPFv2KarbnQ0eS9Sz4og1
 function _ProfilePage({
   onGifts: _onGifts,
   onShowRating,
+  onShowSettings,
   ownedGifts,
   onSelectGift,
+  wornGift,
 }: {
   onGifts: () => void
   onShowRating: () => void
+  onShowSettings: () => void
   ownedGifts: AnyOwnedGift[]
   onSelectGift: (owned: AnyOwnedGift) => void
+  wornGift: WornGift | null
 }) {
+  // Profile bg: worn gift backdrop or default dark
+  const bgColor = wornGift
+    ? wornGift.backdrop.hex.edgeColor
+    : '#1C1C1C'
+  const bgImage = wornGift
+    ? `radial-gradient(50% 55% at 50% 45%, ${wornGift.backdrop.hex.centerColor} 0%, ${wornGift.backdrop.hex.edgeColor} 100%)`
+    : 'none'
+
   return (
     <div className="profile-root">
       <div className="profile-scroll no-scrollbar">
-        <div style={{ height: 'calc(var(--page-pt, 0px) + 5px)' }} aria-hidden="true" />
+        <div style={{ height: 'calc(var(--page-pt, 0px) + 264px)' }} aria-hidden="true" />
 
         <div style={{ minHeight: '100dvh' }}>
           <div className="profile-info-card">
@@ -1106,27 +1313,54 @@ function _ProfilePage({
         </div>
       </div>
 
+      {/* Fixed profile header */}
       <div className="profile-header-card">
-        <div className="profile-header-bg" />
+        <div
+          className="profile-header-bg"
+          style={{ backgroundColor: bgColor, backgroundImage: bgImage }}
+        />
 
-        <div className="profile-topbar">
-          <span />
-          <div className="profile-topbar-right">
-            <button className="profile-settings-btn" aria-label="Настройки">
-              <IconSettings />
-            </button>
-          </div>
+        {/* Settings button — at avatar level (top + 48px + avatar center offset) */}
+        <div className="profile-settings-wrap">
+          <button
+            className="profile-settings-btn"
+            aria-label="Настройки"
+            onClick={() => { haptic(); onShowSettings() }}
+          >
+            <IconSettings />
+          </button>
         </div>
 
         <div className="profile-avatar-wrap">
           <button className="profile-avatar-btn" aria-label="Сменить аватар">
-            <div className="profile-avatar-glow" />
+            <div className="profile-avatar-glow" style={wornGift ? {
+              background: `radial-gradient(circle, ${wornGift.backdrop.hex.centerColor}55 30%, transparent 72%)`
+            } : undefined} />
             <img src={AVATAR} alt="Avatar" className="profile-avatar-img" />
           </button>
         </div>
 
+        {/* Username + worn gift TGS badge */}
         <div className="profile-name-wrap">
-          <button className="profile-name-btn">username</button>
+          <div className="profile-name-row">
+            <button className="profile-name-btn">username</button>
+            {wornGift && (
+              <button
+                className="profile-worn-badge"
+                aria-label={`Надет: ${wornGift.giftCdnName}`}
+                onClick={() => {
+                  // clicking worn badge = open detail of that gift
+                  haptic()
+                }}
+              >
+                <GiftLottie
+                  giftName={wornGift.giftCdnName}
+                  modelName={wornGift.modelName}
+                  className="profile-worn-tgs"
+                />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="profile-status-wrap">
@@ -1135,8 +1369,9 @@ function _ProfilePage({
           </button>
           <span className="profile-online">в сети</span>
         </div>
-      </div>
 
+        {/* No topbar settings btn anymore — moved to avatar level */}
+      </div>
     </div>
   )
 }
@@ -1342,15 +1577,20 @@ export default function App() {
   const [page, setPage] = useState<Page>('profile')
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null)
   const [showRating, setShowRating] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [sparksEnabled, setSparksEnabled] = useState(true)
 
-  // Инвентарь — все купленные подарки
+  // Инвентарь
   const [ownedGifts, setOwnedGifts] = useState<AnyOwnedGift[]>([])
 
   // Выбранный подарок для detail sheet
   const [detailGift, setDetailGift] = useState<AnyOwnedGift | null>(null)
 
-  // Upgrade modal — uid подарка который улучшаем
+  // Upgrade modal
   const [upgradeUid, setUpgradeUid] = useState<string | null>(null)
+
+  // Worn gift
+  const [wornGift, setWornGift] = useState<WornGift | null>(null)
 
   const upgradeTarget = upgradeUid ? ownedGifts.find(o => o.uid === upgradeUid) ?? null : null
   const upgradeGiftId = upgradeTarget ? upgradeTarget.giftId : null
@@ -1358,31 +1598,30 @@ export default function App() {
   const goGifts    = useCallback(() => setPage('gifts'),   [])
   const goProfile  = useCallback(() => setPage('profile'), [])
   const goBuy      = useCallback((g: Gift) => { setSelectedGift(g); setPage('buy') }, [])
-  const openRating   = useCallback(() => setShowRating(true),  [])
-  const closeRating  = useCallback(() => setShowRating(false), [])
-  const navOnGifts   = useCallback(() => setPage('gifts'),   [])
-  const navOnProfile = useCallback(() => setPage('profile'), [])
+  const openRating    = useCallback(() => setShowRating(true),  [])
+  const closeRating   = useCallback(() => setShowRating(false), [])
+  const openSettings  = useCallback(() => setShowSettings(true),  [])
+  const closeSettings = useCallback(() => setShowSettings(false), [])
+  const toggleSparks  = useCallback(() => setSparksEnabled(v => !v), [])
+  const navOnGifts    = useCallback(() => setPage('gifts'),   [])
+  const navOnProfile  = useCallback(() => setPage('profile'), [])
 
-  // Купить — добавляем в инвентарь и идём в профиль
   const handleBought = useCallback((gift: Gift) => {
     const uid = `${gift.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
     setOwnedGifts(prev => [...prev, { uid, giftId: gift.id, upgraded: false }])
     setPage('profile')
   }, [])
 
-  // Открыть detail sheet
   const handleSelectGift = useCallback((owned: AnyOwnedGift) => {
     setDetailGift(owned)
   }, [])
 
-  // Открыть улучшение из detail sheet
   const handleUpgradeFromDetail = useCallback(() => {
     if (!detailGift) return
     setUpgradeUid(detailGift.uid)
     setDetailGift(null)
   }, [detailGift])
 
-  // После улучшения — заменяем запись в инвентаре
   const handleUpgraded = useCallback((result: UpgradeResult) => {
     if (!upgradeUid) return
     setOwnedGifts(prev => prev.map(o => {
@@ -1401,53 +1640,81 @@ export default function App() {
     }))
   }, [upgradeUid])
 
+  // Wear gift
+  const handleWear = useCallback((owned: UpgradedOwnedGift) => {
+    setWornGift({
+      uid: owned.uid,
+      giftCdnName: owned.giftCdnName,
+      modelName: owned.model.name,
+      backdrop: owned.backdrop,
+    })
+  }, [])
+
+  const handleUnwear = useCallback(() => {
+    setWornGift(null)
+  }, [])
+
   const closeUpgrade = useCallback(() => setUpgradeUid(null), [])
   const closeDetail  = useCallback(() => setDetailGift(null), [])
 
   return (
-    <div className="app-root">
-      <div className={`page-layer${page === 'profile' ? ' page-layer--active' : ''}`}>
-        <ProfilePage
-          onGifts={goGifts}
-          onShowRating={openRating}
-          ownedGifts={ownedGifts}
-          onSelectGift={handleSelectGift}
+    <SparklesCtx.Provider value={sparksEnabled}>
+      <div className="app-root">
+        <div className={`page-layer${page === 'profile' ? ' page-layer--active' : ''}`}>
+          <ProfilePage
+            onGifts={goGifts}
+            onShowRating={openRating}
+            onShowSettings={openSettings}
+            ownedGifts={ownedGifts}
+            onSelectGift={handleSelectGift}
+            wornGift={wornGift}
+          />
+        </div>
+
+        <div className={`page-layer${page === 'gifts' ? ' page-layer--active' : ''}`}>
+          <GiftsPage onBack={goProfile} onBuy={goBuy} isActive={page === 'gifts'} />
+        </div>
+
+        <div className={`page-layer${page === 'buy' ? ' page-layer--active' : ''}`}>
+          {selectedGift && (
+            <BuyPage gift={selectedGift} onBack={goGifts} onBought={handleBought} />
+          )}
+        </div>
+
+        {/* Таббар */}
+        <BottomNav
+          page={page === 'buy' ? 'gifts' : page}
+          onGifts={navOnGifts}
+          onProfile={navOnProfile}
+          avatarSrc={AVATAR}
+        />
+
+        <RatingModal isOpen={showRating} onClose={closeRating} />
+
+        <SettingsModal
+          isOpen={showSettings}
+          onClose={closeSettings}
+          sparksEnabled={sparksEnabled}
+          onToggleSparks={toggleSparks}
+        />
+
+        <GiftDetailSheet
+          owned={detailGift}
+          isOpen={detailGift !== null}
+          onClose={closeDetail}
+          onUpgrade={handleUpgradeFromDetail}
+          onWear={handleWear}
+          onUnwear={handleUnwear}
+          wornUid={wornGift?.uid ?? null}
+        />
+
+        <UpgradeModal
+          isOpen={upgradeUid !== null}
+          giftId={upgradeGiftId}
+          onClose={closeUpgrade}
+          onUpgraded={handleUpgraded}
         />
       </div>
-
-      <div className={`page-layer${page === 'gifts' ? ' page-layer--active' : ''}`}>
-        <GiftsPage onBack={goProfile} onBuy={goBuy} isActive={page === 'gifts'} />
-      </div>
-
-      <div className={`page-layer${page === 'buy' ? ' page-layer--active' : ''}`}>
-        {selectedGift && (
-          <BuyPage gift={selectedGift} onBack={goGifts} onBought={handleBought} />
-        )}
-      </div>
-
-      {/* Таббар — поверх всего, без анимации */}
-      <BottomNav
-        page={page === 'buy' ? 'gifts' : page}
-        onGifts={navOnGifts}
-        onProfile={navOnProfile}
-        avatarSrc={AVATAR}
-      />
-
-      <RatingModal isOpen={showRating} onClose={closeRating} />
-
-      <GiftDetailSheet
-        owned={detailGift}
-        isOpen={detailGift !== null}
-        onClose={closeDetail}
-        onUpgrade={handleUpgradeFromDetail}
-      />
-
-      <UpgradeModal
-        isOpen={upgradeUid !== null}
-        giftId={upgradeGiftId}
-        onClose={closeUpgrade}
-        onUpgraded={handleUpgraded}
-      />
-    </div>
+    </SparklesCtx.Provider>
   )
 }
