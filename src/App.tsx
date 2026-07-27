@@ -869,7 +869,6 @@ function ProfilePage({
         </div>
       </div>
 
-      <BottomNav page="profile" onGifts={onGifts} onProfile={() => {}} avatarSrc={AVATAR} />
     </div>
   )
 }
@@ -889,7 +888,7 @@ function GiftCard({ gift, onClick }: { gift: Gift; onClick: () => void }) {
   const iconSrc = GIFT_ICONS[gift.id]
   
   return (
-    <button className="gift-card" onClick={() => { haptic(); onClick() }} style={{ animationDelay: `${gift.id * 0.035}s` }}>
+    <button className="gift-card" onClick={() => { haptic(); onClick() }}>
       <div className="gift-card-img">
         {iconSrc ? (
           <img src={iconSrc} alt={gift.name} className="gift-icon" />
@@ -959,7 +958,6 @@ function GiftsPage({
         </div>
       </div>
 
-      <BottomNav page="gifts" onGifts={() => {}} onProfile={onBack} avatarSrc={AVATAR} />
     </div>
   )
 }
@@ -1067,7 +1065,6 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
         </button>
       </div>
 
-      <BottomNav page="gifts" onGifts={onBack} onProfile={onBack} avatarSrc={AVATAR} />
     </div>
   )
 }
@@ -1085,50 +1082,34 @@ export default function App() {
   function openUpgrade(giftId: number) { setUpgradeGiftId(giftId) }
   function closeUpgrade() { setUpgradeGiftId(null) }
 
+  // Таббар: onGifts и onProfile зависят от текущей страницы
+  const navOnGifts = page === 'gifts' ? () => {} : goGifts
+  const navOnProfile = page === 'profile' ? () => {} : page === 'buy' ? goGifts : goProfile
+
   return (
     <div className="app-root">
-      <AnimatePresence mode="wait" initial={false}>
-        {page === 'profile' && (
-          <motion.div
-            key="profile"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            <ProfilePage
-              onGifts={goGifts}
-              onShowRating={() => setShowRating(true)}
-              onShowUpgrade={openUpgrade}
-            />
-          </motion.div>
-        )}
-        {page === 'gifts' && (
-          <motion.div
-            key="gifts"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            <GiftsPage onBack={goProfile} onBuy={goBuy} />
-          </motion.div>
-        )}
-        {page === 'buy' && selectedGift && (
-          <motion.div
-            key="buy"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            <BuyPage gift={selectedGift} onBack={goGifts} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {page === 'profile' && (
+        <ProfilePage
+          onGifts={goGifts}
+          onShowRating={() => setShowRating(true)}
+          onShowUpgrade={openUpgrade}
+        />
+      )}
+      {page === 'gifts' && (
+        <GiftsPage onBack={goProfile} onBuy={goBuy} />
+      )}
+      {page === 'buy' && selectedGift && (
+        <BuyPage gift={selectedGift} onBack={goGifts} />
+      )}
+
+      {/* Таббар вне fade-зоны — не анимируется */}
+      <BottomNav
+        page={page === 'buy' ? 'gifts' : page}
+        onGifts={navOnGifts}
+        onProfile={navOnProfile}
+        avatarSrc={AVATAR}
+      />
+
       <RatingModal isOpen={showRating} onClose={() => setShowRating(false)} />
       <UpgradeModal
         isOpen={upgradeGiftId !== null}
