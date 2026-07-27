@@ -24,6 +24,7 @@ interface WornGift {
   giftCdnName: string
   modelName: string
   backdrop: CdnBackdrop
+  pattern: { name: string; rarityPermille: number }
 }
 
 interface Gift {
@@ -373,6 +374,11 @@ function UpgradeModal({
     ? `${CDN}/models/${encodeURIComponent(giftName)}/png/${encodeURIComponent(activeModel.name)}.png`
     : `${CDN}/models/Plush%20Pepe/png/Original.png`
 
+  // Для SVG паттерна фона используем символ узора если он уже выпал, иначе модель
+  const backdropPatternUrl = (phase === 'result' && result && giftName)
+    ? `${CDN}/patterns/${encodeURIComponent(giftName)}/png/${encodeURIComponent(result.pattern.name)}.png`
+    : pngUrl
+
   // Список моделей для рулетки (28 штук, последний — победитель)
   const rouletteModels = phase === 'upgrading' && result === null && models.length > 0
     ? [...models, ...models, ...models].slice(0, 28)
@@ -408,7 +414,7 @@ function UpgradeModal({
                   <feFlood floodColor={patternColor} />
                   <feComposite in2="SourceGraphic" operator="in" />
                 </filter>
-                <image id="uppat" x="-50" y="-50" width="100" height="100" href={pngUrl} crossOrigin="anonymous" />
+                <image id="uppat" x="-50" y="-50" width="100" height="100" href={backdropPatternUrl} crossOrigin="anonymous" />
                 <g id="upgrp">
                   {PATTERN_TRANSFORMS.map((t, i) => (
                     <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
@@ -879,11 +885,13 @@ function ProfileGiftCard({ owned, onClick }: { owned: AnyOwnedGift; onClick: () 
   }
 
   // Улучшенный — backdrop + паттерн + PNG (TGS только в модалке)
-  const { backdrop, model, serialNumber, giftCdnName } = owned
+  const { backdrop, model, pattern, serialNumber, giftCdnName } = owned
   const centerColor  = backdrop.hex.centerColor
   const edgeColor    = backdrop.hex.edgeColor
   const patternColor = backdrop.hex.patternColor
   const pngUrl = `${CDN}/models/${encodeURIComponent(giftCdnName)}/png/${encodeURIComponent(model.name)}.png`
+  // Символ узора для SVG-паттерна фона
+  const patternSymbolUrl = `${CDN}/patterns/${encodeURIComponent(giftCdnName)}/png/${encodeURIComponent(pattern.name)}.png`
 
   return (
     <div
@@ -904,7 +912,7 @@ function ProfileGiftCard({ owned, onClick }: { owned: AnyOwnedGift; onClick: () 
               <feFlood floodColor={patternColor} />
               <feComposite in2="SourceGraphic" operator="in" />
             </filter>
-            <image id={`pgpat-${owned.uid}`} x="-50" y="-50" width="100" height="100" href={pngUrl} crossOrigin="anonymous" />
+            <image id={`pgpat-${owned.uid}`} x="-50" y="-50" width="100" height="100" href={patternSymbolUrl} crossOrigin="anonymous" />
             <g id={`pggrp-${owned.uid}`}>
               {PATTERN_TRANSFORMS.map((t, i) => (
                 <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
@@ -974,6 +982,10 @@ function GiftDetailSheet({
   const pngUrl = upgraded
     ? `${CDN}/models/${encodeURIComponent(upgraded.giftCdnName)}/png/${encodeURIComponent(upgraded.model.name)}.png`
     : null
+  // Символ узора для SVG-паттерна фона (как в 555)
+  const patternSymbolUrl = upgraded
+    ? `${CDN}/patterns/${encodeURIComponent(upgraded.giftCdnName)}/png/${encodeURIComponent(upgraded.pattern.name)}.png`
+    : null
 
   // action button bg
   const btnBg = upgraded
@@ -1003,7 +1015,7 @@ function GiftDetailSheet({
                     <feFlood floodColor={patternColor} />
                     <feComposite in2="SourceGraphic" operator="in" />
                   </filter>
-                  <image id={`gdpat555-${owned.uid}`} x="-50" y="-50" width="100" height="100" href={pngUrl!} crossOrigin="anonymous" />
+                  <image id={`gdpat555-${owned.uid}`} x="-50" y="-50" width="100" height="100" href={patternSymbolUrl!} crossOrigin="anonymous" />
                   <g id={`gdgrp555-${owned.uid}`}>
                     {PATTERN_TRANSFORMS.map((t, i) => (
                       <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
@@ -1339,12 +1351,10 @@ function _ProfilePage({
           style={{ backgroundColor: bgColor, backgroundImage: bgImage }}
         />
 
-        {/* Pattern overlay — показываем только когда надет подарок */}
+        {/* Pattern overlay — показываем только когда надет улучшенный подарок */}
         {wornGift && (() => {
-          const origId = GIFT_CDN_ORIG_ID[wornGift.giftCdnName]
-          const patternImgUrl = origId
-            ? `${CDN}/originals/${origId}/Original.png`
-            : `${CDN}/models/${encodeURIComponent(wornGift.giftCdnName)}/png/Original.png`
+          // patterns/{giftName}/png/{pattern.name}.png — именно узор, не модель
+          const patternImgUrl = `${CDN}/patterns/${encodeURIComponent(wornGift.giftCdnName)}/png/${encodeURIComponent(wornGift.pattern.name)}.png`
           const patternColor = wornGift.backdrop.hex.patternColor
           const uid = wornGift.uid.replace(/[^a-z0-9]/gi, '')
           return (
@@ -1703,6 +1713,7 @@ export default function App() {
       giftCdnName: owned.giftCdnName,
       modelName: owned.model.name,
       backdrop: owned.backdrop,
+      pattern: owned.pattern,
     })
   }, [])
 
