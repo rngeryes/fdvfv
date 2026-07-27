@@ -868,6 +868,7 @@ function NumberDetailSheet({
   isOpen,
   onClose,
   onApply,
+  onUnwear,
   wornUid,
   tgUser,
 }: {
@@ -875,6 +876,7 @@ function NumberDetailSheet({
   isOpen: boolean
   onClose: () => void
   onApply: (num: StoredNumber) => void
+  onUnwear: () => void
   wornUid: string | null
   tgUser: ReturnType<typeof getTgUser>
 }) {
@@ -891,14 +893,12 @@ function NumberDetailSheet({
         aria-modal="true"
         onClick={e => e.stopPropagation()}
       >
-        {/* ── Header ── */}
-        <div className="gd-header" style={{ background: '#111827', minHeight: 240 }}>
-          {/* тёмный фон с лёгким синим оттенком */}
+        {/* ── Header — без картинки, только номер и кнопки ── */}
+        <div className="gd-header" style={{ minHeight: 'auto', paddingTop: 48, paddingBottom: 16 }}>
           <div className="gd-backdrop" style={{
             background: 'radial-gradient(60% 70% at 50% 30%, #1a2a3a 0%, #0d1117 100%)'
           }} />
 
-          {/* Controls */}
           <div className="gd-controls">
             <button className="gd-ctrl-btn" aria-label="Закрыть" onClick={() => { haptic(); onClose() }}>
               <IconClose />
@@ -912,17 +912,8 @@ function NumberDetailSheet({
             </button>
           </div>
 
-          {/* SVG превью */}
-          {num && (
-            <div className="gd-lottie-wrap" style={{ width: 160, height: 160 }}>
-              <NumberCardPreview num={num} />
-            </div>
-          )}
+          <h2 className="gd-title">{num?.formatted ?? ''}</h2>
 
-          {/* Заголовок */}
-          <h2 className="gd-title" style={{ fontSize: 18 }}>{num?.formatted ?? ''}</h2>
-
-          {/* Кнопки действий */}
           <div className="gd-actions-row">
             {/* Передать */}
             <button className="gd-action-btn" style={{ background: '#1f2937' }} onClick={() => haptic()}>
@@ -936,10 +927,14 @@ function NumberDetailSheet({
             {/* Применить / Снять */}
             <button
               className="gd-action-btn"
-              style={{ background: isWorn ? '#1f2937' : pal.pill }}
+              style={{ background: isWorn ? '#2a2a2e' : pal.pill }}
               onClick={() => {
                 haptic()
-                if (num) onApply(num)
+                if (isWorn) {
+                  onUnwear()
+                } else if (num) {
+                  onApply(num)
+                }
                 onClose()
               }}
             >
@@ -964,7 +959,7 @@ function NumberDetailSheet({
           </div>
         </div>
 
-        {/* ── Таблица атрибутов ── */}
+        {/* ── Таблица ── */}
         <div className="gd-attr-table">
           <div className="gd-attr-row">
             <span className="gd-attr-key">Владелец</span>
@@ -1008,14 +1003,10 @@ function NumberDetailSheet({
   )
 }
 
-function StoragePage({ numbers, onApply, wornUid, tgUser }: {
+function StoragePage({ numbers, onSelectNumber }: {
   numbers: StoredNumber[]
-  onApply: (num: StoredNumber) => void
-  wornUid: string | null
-  tgUser: ReturnType<typeof getTgUser>
+  onSelectNumber: (num: StoredNumber) => void
 }) {
-  const [selected, setSelected] = useState<StoredNumber | null>(null)
-
   return (
     <div className="storage-root">
       <div className="storage-scroll no-scrollbar">
@@ -1035,20 +1026,11 @@ function StoragePage({ numbers, onApply, wornUid, tgUser }: {
         ) : (
           <div className="storage-grid">
             {numbers.map(n => (
-              <NumberCard key={n.uid} num={n} onClick={() => setSelected(n)} />
+              <NumberCard key={n.uid} num={n} onClick={() => onSelectNumber(n)} />
             ))}
           </div>
         )}
       </div>
-
-      <NumberDetailSheet
-        num={selected}
-        isOpen={selected !== null}
-        onClose={() => setSelected(null)}
-        onApply={onApply}
-        wornUid={wornUid}
-        tgUser={tgUser}
-      />
     </div>
   )
 }
@@ -2388,6 +2370,7 @@ export default function App() {
   // +888 хранилище
   const [storedNumbers, setStoredNumbers] = useState<StoredNumber[]>([])
   const [wornNumber, setWornNumber] = useState<StoredNumber | null>(null)
+  const [selectedNumber, setSelectedNumber] = useState<StoredNumber | null>(null)
   const [lastGenTime, setLastGenTime] = useState<number>(0)
 
   const handleNumberPurchase = useCallback((num: StoredNumber) => {
@@ -2400,6 +2383,11 @@ export default function App() {
   const handleNumberApply = useCallback((num: StoredNumber) => {
     setWornNumber(num)
     haptic(20)
+  }, [])
+
+  const handleNumberUnwear = useCallback(() => {
+    setWornNumber(null)
+    haptic(10)
   }, [])
 
   // Выбранный подарок для detail sheet
@@ -2508,9 +2496,7 @@ export default function App() {
         <div className={`page-layer${page === 'storage' ? ' page-layer--active' : ''}`}>
           <StoragePage
             numbers={storedNumbers}
-            onApply={handleNumberApply}
-            wornUid={wornNumber?.uid ?? null}
-            tgUser={tgUser}
+            onSelectNumber={setSelectedNumber}
           />
         </div>
 
@@ -2559,6 +2545,16 @@ export default function App() {
           giftId={upgradeGiftId}
           onClose={closeUpgrade}
           onUpgraded={handleUpgraded}
+        />
+
+        <NumberDetailSheet
+          num={selectedNumber}
+          isOpen={selectedNumber !== null}
+          onClose={() => setSelectedNumber(null)}
+          onApply={handleNumberApply}
+          onUnwear={handleNumberUnwear}
+          wornUid={wornNumber?.uid ?? null}
+          tgUser={tgUser}
         />
       </div>
     </SparklesCtx.Provider>
