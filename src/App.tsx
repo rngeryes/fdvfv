@@ -809,6 +809,58 @@ function StoragePage({ numbers }: { numbers: StoredNumber[] }) {
 }
 
 // ─── Phone 888 Page ────────────────────────────────────────────────────────────
+// Генерация 8 цифр после 888. ~25% шанс получить "блатной" номер.
+function generatePhone888Digits(): string {
+  const roll = Math.random()
+
+  // ── Уровень 1 (~5%): супер-блатной — одна цифра повторяется 8 раз или почти
+  if (roll < 0.05) {
+    const d = String(Math.floor(Math.random() * 10))
+    // иногда одна цифра 8 раз: 88888888
+    if (Math.random() < 0.4) return d.repeat(8)
+    // иногда зеркало: 12344321
+    const half = Array.from({ length: 4 }, () => String(Math.floor(Math.random() * 10))).join('')
+    return half + [...half].reverse().join('')
+  }
+
+  // ── Уровень 2 (~10%): красивые паттерны
+  if (roll < 0.15) {
+    const type = Math.floor(Math.random() * 4)
+    if (type === 0) {
+      // возрастающий / убывающий: 12345678 или 87654321
+      const asc = Math.random() < 0.5
+      return Array.from({ length: 8 }, (_, i) => String(asc ? i + 1 : 8 - i)).join('')
+    }
+    if (type === 1) {
+      // блок повторов: 11112222
+      const a = String(Math.floor(Math.random() * 10))
+      const b = String(Math.floor(Math.random() * 10))
+      return a.repeat(4) + b.repeat(4)
+    }
+    if (type === 2) {
+      // чередование: 12121212
+      const a = String(Math.floor(Math.random() * 10))
+      const b = String(Math.floor(Math.random() * 10))
+      return (a + b).repeat(4)
+    }
+    // type === 3: round number — 7 одинаковых + 1 другая: 7777777X
+    const d = String(Math.floor(Math.random() * 10))
+    const x = String(Math.floor(Math.random() * 10))
+    return d.repeat(7) + x
+  }
+
+  // ── Уровень 3 (~10%): мало уникальных цифр (2–3 разных)
+  if (roll < 0.25) {
+    const pool = [
+      String(Math.floor(Math.random() * 10)),
+      String(Math.floor(Math.random() * 10)),
+    ]
+    return Array.from({ length: 8 }, () => pool[Math.floor(Math.random() * pool.length)]).join('')
+  }
+
+  // ── Обычный (~75%): случайные 8 цифр
+  return Array.from({ length: 8 }, () => String(Math.floor(Math.random() * 10))).join('')
+}
 function SpoilerCanvas({ revealed }: { revealed: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef   = useRef<number>(0)
@@ -913,10 +965,10 @@ function Phone888Page({ onPurchase }: { onPurchase: (num: StoredNumber) => void 
   const [revealed, setRevealed] = useState(false)
   // generate a random number once — 8 digits after 888
   const [storedNum] = useState<StoredNumber>(() => {
-    const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('')
+    const digits = generatePhone888Digits()
     const raw = `888${digits}`
-    // format: +888 XXX XXX XX XX
-    const formatted = `+888 ${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6,8)} ${digits.slice(8)}`
+    // формат +888 XXXX XXXX
+    const formatted = `+888 ${digits.slice(0, 4)} ${digits.slice(4, 8)}`
     return { uid: `888-${Date.now()}-${Math.random().toString(36).slice(2)}`, raw, formatted }
   })
 
