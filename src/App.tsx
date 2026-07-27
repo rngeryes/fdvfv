@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo, createContext, useContext } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
 import { motion } from 'framer-motion'
+import confetti from 'canvas-confetti'
 import './App.css'
 
 // ─── Sparkles context ─────────────────────────────────────────────────────────
@@ -318,6 +319,10 @@ function UpgradeModal({
     setResult(res)
     setPhase('result')
     onUpgraded?.(res)
+
+    // 🎉 Конфетти при выпадении подарка — два залпа с обеих сторон снизу
+    confetti({ particleCount: 60, spread: 35, startVelocity: 60, origin: { x: 0, y: 0.8 }, angle: 55 })
+    confetti({ particleCount: 60, spread: 35, startVelocity: 60, origin: { x: 1, y: 0.8 }, angle: 125 })
   }, [giftName, backdrops, models, onUpgraded])
 
   // Цикл смены слайда — только в preview
