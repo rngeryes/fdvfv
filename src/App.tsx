@@ -16,7 +16,7 @@ function haptic(duration = 10) {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Page = 'profile' | 'gifts' | 'buy'
+type Page = 'profile' | 'gifts' | 'buy' | 'storage' | 'phone888'
 
 // Worn gift state — used for profile bg + nickname badge
 interface WornGift {
@@ -636,6 +636,26 @@ function IconChevronLeft() {
   )
 }
 
+function IconStorage() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="3" width="20" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
+      <rect x="2" y="10" width="20" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
+      <rect x="2" y="17" width="20" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.6"/>
+      <circle cx="18.5" cy="5.5" r="1" fill="currentColor"/>
+      <circle cx="18.5" cy="12.5" r="1" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function IconPhone888() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M6.62 10.79a15.053 15.053 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C9.61 21 3 14.39 3 6a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 function IconClose() {
   return (
     <svg width="17" height="17" viewBox="0 0 16 16" fill="none">
@@ -743,17 +763,51 @@ function PriceSparks() {
   )
 }
 
+// ─── Storage Page (placeholder) ───────────────────────────────────────────────
+function StoragePage() {
+  return (
+    <div className="placeholder-root">
+      <div className="placeholder-inner">
+        <div className="placeholder-icon">
+          <IconStorage />
+        </div>
+        <h2 className="placeholder-title">Хранилище</h2>
+        <p className="placeholder-desc">Этот раздел появится в ближайшем обновлении.</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Phone 888 Page (placeholder) ─────────────────────────────────────────────
+function Phone888Page() {
+  return (
+    <div className="placeholder-root">
+      <div className="placeholder-inner">
+        <div className="placeholder-icon">
+          <IconPhone888 />
+        </div>
+        <h2 className="placeholder-title">+888</h2>
+        <p className="placeholder-desc">Этот раздел появится в ближайшем обновлении.</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Bottom Nav ───────────────────────────────────────────────────────────────
 function BottomNav({
   page,
   onGifts,
   onProfile,
+  onStorage,
+  onPhone888,
   avatarSrc,
   avatarName,
 }: {
   page: Page
   onGifts: () => void
   onProfile: () => void
+  onStorage: () => void
+  onPhone888: () => void
   avatarSrc: string | null
   avatarName: string
 }) {
@@ -762,19 +816,24 @@ function BottomNav({
       <div className="bnav-spacer" />
       <button
         className={`bnav-item${page === 'gifts' ? ' active' : ''}`}
-        onClick={() => {
-          haptic()
-          onGifts()
-        }}
-        onMouseEnter={e => {
-          if (page !== 'gifts') (e.currentTarget as HTMLElement).style.color = '#f5f5f5'
-        }}
-        onMouseLeave={e => {
-          if (page !== 'gifts') (e.currentTarget as HTMLElement).style.color = ''
-        }}
+        onClick={() => { haptic(); onGifts() }}
       >
         <IconGift />
         <span>Подарки</span>
+      </button>
+      <button
+        className={`bnav-item${page === 'storage' ? ' active' : ''}`}
+        onClick={() => { haptic(); onStorage() }}
+      >
+        <IconStorage />
+        <span>Хранилище</span>
+      </button>
+      <button
+        className={`bnav-item${page === 'phone888' ? ' active' : ''}`}
+        onClick={() => { haptic(); onPhone888() }}
+      >
+        <IconPhone888 />
+        <span>+888</span>
       </button>
       <button
         className="bnav-avatar-btn"
@@ -1814,6 +1873,8 @@ export default function App() {
   const toggleSparks  = useCallback(() => setSparksEnabled(v => !v), [])
   const navOnGifts    = useCallback(() => setPage('gifts'),   [])
   const navOnProfile  = useCallback(() => setPage('profile'), [])
+  const navOnStorage  = useCallback(() => setPage('storage'), [])
+  const navOnPhone888 = useCallback(() => setPage('phone888'), [])
 
   const handleBought = useCallback((gift: Gift) => {
     const uid = `${gift.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -1892,11 +1953,21 @@ export default function App() {
           )}
         </div>
 
+        <div className={`page-layer${page === 'storage' ? ' page-layer--active' : ''}`}>
+          <StoragePage />
+        </div>
+
+        <div className={`page-layer${page === 'phone888' ? ' page-layer--active' : ''}`}>
+          <Phone888Page />
+        </div>
+
         {/* Таббар */}
         <BottomNav
           page={page === 'buy' ? 'gifts' : page}
           onGifts={navOnGifts}
           onProfile={navOnProfile}
+          onStorage={navOnStorage}
+          onPhone888={navOnPhone888}
           avatarSrc={tgAvatarSrc}
           avatarName={tgDisplayName}
         />
