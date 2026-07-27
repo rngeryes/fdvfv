@@ -1775,9 +1775,14 @@ export default function App() {
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const user = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user ?? null
+    const WebApp = (window as any)?.Telegram?.WebApp
     // eslint-disable-next-line no-console
-    console.log('[TG] initDataUnsafe.user:', user)
+    console.log('[TG] WebApp:', WebApp)
+    // eslint-disable-next-line no-console
+    console.log('[TG] initData:', WebApp?.initData)
+    // eslint-disable-next-line no-console
+    console.log('[TG] initDataUnsafe:', JSON.stringify(WebApp?.initDataUnsafe))
+    const user = WebApp?.initDataUnsafe?.user ?? null
     if (user) setTgUser(user)
   }, [])
 
