@@ -1291,6 +1291,23 @@
   to   { opacity: 1; }
 }
 
+/* ── Page layer (cross-fade между вкладками) ── */
+.page-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  /* z-index ниже таббара */
+  z-index: 1;
+}
+
+.page-layer--active {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 2;
+}
+
 /* ── Skeleton shimmer ── */
 .gift-card-skeleton {
   position: relative;
