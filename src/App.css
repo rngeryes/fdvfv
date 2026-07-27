@@ -1298,14 +1298,18 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
-  /* z-index ниже таббара */
   z-index: 1;
+  /* Скрываем рендер неактивных вкладок после завершения fade-out */
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
 }
 
 .page-layer--active {
   opacity: 1;
   pointer-events: auto;
   z-index: 2;
+  visibility: visible;
+  transition: opacity 0.25s ease, visibility 0s linear 0s;
 }
 
 /* ── Skeleton shimmer ── */
