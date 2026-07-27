@@ -778,16 +778,139 @@ function StoragePage() {
   )
 }
 
-// ─── Phone 888 Page (placeholder) ─────────────────────────────────────────────
-function Phone888Page() {
+// ─── Phone 888 Page ────────────────────────────────────────────────────────────
+function SpoilerCanvas({ revealed }: { revealed: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animRef   = useRef<number>(0)
+  const opacityRef = useRef(1)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const W = canvas.width  = canvas.offsetWidth
+    const H = canvas.height = canvas.offsetHeight
+
+    // particles
+    const COUNT = 220
+    type P = { x: number; y: number; vx: number; vy: number; r: number; alpha: number }
+    const particles: P[] = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
+      r: Math.random() * 1.6 + 0.4,
+      alpha: Math.random() * 0.7 + 0.3,
+    }))
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H)
+      const o = opacityRef.current
+      if (o <= 0) { cancelAnimationFrame(animRef.current); return }
+
+      for (const p of particles) {
+        p.x += p.vx
+        p.y += p.vy
+        if (p.x < 0) p.x = W
+        if (p.x > W) p.x = 0
+        if (p.y < 0) p.y = H
+        if (p.y > H) p.y = 0
+
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255,255,255,${p.alpha * o})`
+        ctx.fill()
+      }
+
+      animRef.current = requestAnimationFrame(draw)
+    }
+
+    animRef.current = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(animRef.current)
+  }, [])
+
+  // Fade out when revealed
+  useEffect(() => {
+    if (!revealed) { opacityRef.current = 1; return }
+    const start = performance.now()
+    const dur = 500
+    const fade = (now: number) => {
+      const t = Math.min((now - start) / dur, 1)
+      opacityRef.current = 1 - t
+      if (t < 1) requestAnimationFrame(fade)
+    }
+    requestAnimationFrame(fade)
+  }, [revealed])
+
   return (
-    <div className="placeholder-root">
-      <div className="placeholder-inner">
-        <div className="placeholder-icon">
-          <IconPhone888 />
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        borderRadius: 'inherit',
+        pointerEvents: 'none',
+      }}
+    />
+  )
+}
+
+function Phone888Page() {
+  const [revealed, setRevealed] = useState(false)
+  // generate a random number once
+  const [number] = useState(() => {
+    const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('')
+    // format: XXX XXX XX XX
+    return `${digits.slice(0,3)} ${digits.slice(3,6)} ${digits.slice(6,8)} ${digits.slice(8)}`
+  })
+
+  return (
+    <div className="p888-root">
+      <div className="p888-inner">
+        <h1 className="p888-title">Случайный номер Telegram</h1>
+        <p className="p888-desc">
+          Анонимный номер +888 для входа в Telegram без SIM‑карты.
+          Номер станет виден после покупки.
+        </p>
+
+        {/* Number card */}
+        <div className="p888-card">
+          <span className="p888-prefix">+888</span>
+          <div className="p888-number-wrap">
+            <span className={`p888-number${revealed ? ' revealed' : ''}`}>{number}</span>
+            {!revealed && <SpoilerCanvas revealed={revealed} />}
+          </div>
         </div>
-        <h2 className="placeholder-title">+888</h2>
-        <p className="placeholder-desc">Этот раздел появится в ближайшем обновлении.</p>
+
+        {/* CTA */}
+        <button
+          className="p888-btn"
+          onClick={() => { haptic(15); setRevealed(true) }}
+          disabled={revealed}
+        >
+          {revealed ? (
+            'Номер разблокирован'
+          ) : (
+            <>
+              Разблокировать номер
+              <span className="p888-btn-stars">
+                <svg width="14" height="14" viewBox="0 0 22 22" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+                  <path d="M8.17 7.475L10.12 3.608C10.344 3.174 10.946 2.98 11.397 3.195C11.573 3.281 11.753 3.445 11.839 3.625L13.691 7.402C13.842 7.711 14.087 7.866 14.422 7.909L18.233 8.364C18.796 8.433 19.196 8.996 19.131 9.529C19.105 9.748 19.007 9.98 18.852 10.135L15.801 13.156C15.677 13.28 15.646 13.422 15.668 13.594L16.162 17.68C16.235 18.269 15.767 18.81 15.187 18.883C14.968 18.909 14.714 18.883 14.516 18.776L11.35 17.031C11.049 16.877 10.838 16.885 10.602 17.01L7.319 18.711C6.846 18.956 6.189 18.763 5.948 18.286C5.858 18.106 5.785 17.916 5.819 17.676L6.073 15.824C6.21 14.823 6.812 13.985 7.628 13.564L11.105 11.755C11.324 11.626 11.337 11.506 11.014 11.548L6.709 12.137C6.013 12.236 5.265 11.987 4.719 11.54L3.224 10.298C2.807 9.971 2.734 9.245 3.087 8.807C3.25 8.605 3.512 8.42 3.766 8.386L7.65 7.883C7.899 7.857 8.062 7.703 8.174 7.475Z" fill="url(#sg888)" stroke="none"/>
+                  <defs><linearGradient id="sg888" x1="11" y1="3" x2="11" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#FFB600"/><stop offset="1" stopColor="#ED8200"/></linearGradient></defs>
+                </svg>
+                9
+              </span>
+            </>
+          )}
+        </button>
+
+        {!revealed && (
+          <p className="p888-hint">Номер станет виден сразу после оплаты</p>
+        )}
       </div>
     </div>
   )
