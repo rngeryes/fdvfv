@@ -766,16 +766,105 @@ function PriceSparks() {
 // ─── Storage Page ─────────────────────────────────────────────────────────────
 interface StoredNumber {
   uid: string
-  raw: string   // '88812345678' — только цифры без пробелов
-  formatted: string  // '+888 123 456 78' — для отображения
+  raw: string        // '88812345678' — только цифры без пробелов
+  formatted: string  // '+888 XXXX XXXX' — для отображения
+  bgIndex: number    // 0–7 — индекс цветовой схемы фона
+}
+
+// Палитра фонов — тёмные градиенты с разными акцентами
+const NUMBER_CARD_PALETTES = [
+  { bg1: '#1a2a3a', bg2: '#0d1b2a', pill: '#2ea6ff' },  // синий (default tg)
+  { bg1: '#1a2e24', bg2: '#0d1a14', pill: '#34c759' },  // зелёный
+  { bg1: '#2e1a2e', bg2: '#1a0d1a', pill: '#bf5af2' },  // фиолетовый
+  { bg1: '#2e1a1a', bg2: '#1a0d0d', pill: '#ff453a' },  // красный
+  { bg1: '#2e2a1a', bg2: '#1a170d', pill: '#ff9f0a' },  // оранжевый
+  { bg1: '#1a2a2e', bg2: '#0d181a', pill: '#5ac8fa' },  // голубой
+  { bg1: '#221a2e', bg2: '#130d1a', pill: '#ff375f' },  // розовый
+  { bg1: '#1e1e28', bg2: '#111118', pill: '#636366' },  // серый
+]
+
+function NumberCardPreview({ num }: { num: StoredNumber }) {
+  const pal = NUMBER_CARD_PALETTES[num.bgIndex % NUMBER_CARD_PALETTES.length]
+  // Отображаемый номер внутри SVG: +888 + форматированные цифры
+  const display = num.formatted  // '+888 XXXX XXXX'
+
+  return (
+    <svg
+      viewBox="0 0 200 200"
+      xmlns="http://www.w3.org/2000/svg"
+      width="100%"
+      height="100%"
+      style={{ display: 'block' }}
+    >
+      <defs>
+        <radialGradient id={`bg-${num.uid}`} cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stopColor={pal.bg1} />
+          <stop offset="100%" stopColor={pal.bg2} />
+        </radialGradient>
+        {/* Тонкий шум-паттерн из точек */}
+        <pattern id={`dot-${num.uid}`} width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.6" fill="rgba(255,255,255,0.04)" />
+        </pattern>
+      </defs>
+
+      {/* Фон */}
+      <rect width="200" height="200" fill={`url(#bg-${num.uid})`} />
+      <rect width="200" height="200" fill={`url(#dot-${num.uid})`} />
+
+      {/* Иконка Telegram — белый squircle + синий круг + самолётик */}
+      {/* squircle через rect с большим rx */}
+      <rect x="72" y="28" width="56" height="56" rx="14" fill="white" opacity="0.97" />
+      <circle cx="100" cy="56" r="22" fill={pal.pill} />
+      {/* бумажный самолётик */}
+      <path
+        d="M91 56.5 L111 49 L104.5 63 L100 59 Z"
+        fill="white"
+      />
+      <path
+        d="M100 59 L101.5 64 L104.5 63"
+        fill="white"
+        opacity="0.7"
+      />
+
+      {/* Синяя таблетка с номером */}
+      <rect x="14" y="110" width="172" height="44" rx="13" fill={pal.pill} opacity="0.92" />
+      <text
+        x="100"
+        y="137"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif"
+        fontSize="15.5"
+        fontWeight="700"
+        fill="white"
+        letterSpacing="0.5"
+      >
+        {display}
+      </text>
+
+      {/* Подпись */}
+      <text
+        x="100"
+        y="170"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif"
+        fontSize="11"
+        fontWeight="400"
+        fill="rgba(255,255,255,0.38)"
+        letterSpacing="0.2"
+      >
+        Anonymous Telegram Number
+      </text>
+    </svg>
+  )
 }
 
 function NumberCard({ num }: { num: StoredNumber }) {
-  const imgUrl = `https://nft.fragment.com/number/${num.raw}.webp`
   return (
     <div className="ncard">
       <div className="ncard-img-wrap">
-        <img src={imgUrl} alt={num.formatted} className="ncard-img" draggable={false} />
+        <NumberCardPreview num={num} />
       </div>
       <div className="ncard-info">
         <span className="ncard-number">{num.formatted}</span>
@@ -969,7 +1058,7 @@ function Phone888Page({ onPurchase }: { onPurchase: (num: StoredNumber) => void 
     const raw = `888${digits}`
     // формат +888 XXXX XXXX
     const formatted = `+888 ${digits.slice(0, 4)} ${digits.slice(4, 8)}`
-    return { uid: `888-${Date.now()}-${Math.random().toString(36).slice(2)}`, raw, formatted }
+    return { uid: `888-${Date.now()}-${Math.random().toString(36).slice(2)}`, raw, formatted, bgIndex: Math.floor(Math.random() * 8) }
   })
 
   const handleReveal = () => {
