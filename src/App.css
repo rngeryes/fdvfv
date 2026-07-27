@@ -1286,3 +1286,57 @@
   cursor: default;
   transform: none;
 }
+
+/* ── Page fade transition ── */
+.page-fade {
+  animation: pageFadeIn 0.22s ease both;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Skeleton shimmer ── */
+.gift-card-skeleton {
+  position: relative;
+  height: 154px;
+  border-radius: 16px;
+  background: #1C1C1D;
+  overflow: hidden;
+}
+
+.gift-card-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.07) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 20px auto 0;
+}
+
+.skeleton-price {
+  width: 52px;
+  height: 20px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 14px auto 0;
+}
