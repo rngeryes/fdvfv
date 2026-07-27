@@ -865,14 +865,13 @@ function StoragePage({ numbers }: { numbers: StoredNumber[] }) {
   return (
     <div className="storage-root">
       <div className="storage-scroll no-scrollbar">
-        {/* Шапка как у Gifts */}
-        <div className="storage-user-header">
-          <div className="storage-icon-wrap">
-            <IconStorage />
-          </div>
+
+        {/* Шапка — по центру как в +888 */}
+        <div className="storage-hero">
           <h1 className="storage-heading">Хранилище</h1>
           <p className="storage-desc">
-            Здесь хранятся ваши анонимные номера +888. Примените номер, чтобы он отобразился в профиле.
+            Здесь хранятся ваши анонимные номера +888.
+            Примените номер, чтобы он отобразился в профиле.
           </p>
         </div>
 
