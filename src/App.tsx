@@ -864,22 +864,29 @@ function NumberCard({ num }: { num: StoredNumber }) {
 function StoragePage({ numbers }: { numbers: StoredNumber[] }) {
   return (
     <div className="storage-root">
-      <div className="storage-topbar">
-        <h1 className="storage-title">Хранилище</h1>
-      </div>
-      {numbers.length === 0 ? (
-        <div className="storage-empty">
-          <div className="placeholder-icon"><IconStorage /></div>
-          <p className="storage-empty-title">Хранилище пусто</p>
-          <p className="storage-empty-sub">Купленные номера +888 появятся здесь</p>
+      <div className="storage-scroll no-scrollbar">
+        {/* Шапка как у Gifts */}
+        <div className="storage-user-header">
+          <div className="storage-icon-wrap">
+            <IconStorage />
+          </div>
+          <h1 className="storage-heading">Хранилище</h1>
+          <p className="storage-desc">
+            Здесь хранятся ваши анонимные номера +888. Примените номер, чтобы он отобразился в профиле.
+          </p>
         </div>
-      ) : (
-        <div className="storage-scroll no-scrollbar">
+
+        {numbers.length === 0 ? (
+          <div className="storage-empty">
+            <p className="storage-empty-title">Номеров пока нет</p>
+            <p className="storage-empty-sub">Купите номер во вкладке +888</p>
+          </div>
+        ) : (
           <div className="storage-grid">
             {numbers.map(n => <NumberCard key={n.uid} num={n} />)}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -1037,21 +1044,59 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
   )
 }
 
-function Phone888Page({ onPurchase }: { onPurchase: (num: StoredNumber) => void }) {
+function makeNewNumber(): StoredNumber {
+  const digits = generatePhone888Digits()
+  const raw = `888${digits}`
+  const formatted = `+888 ${digits.slice(0, 4)} ${digits.slice(4, 8)}`
+  return { uid: `888-${Date.now()}-${Math.random().toString(36).slice(2)}`, raw, formatted, bgIndex: Math.floor(Math.random() * 8) }
+}
+
+function Phone888Page({ onPurchase, onApply, lastGenTime, setLastGenTime }: {
+  onPurchase: (num: StoredNumber) => void
+  onApply: (num: StoredNumber) => void
+  lastGenTime: number
+  setLastGenTime: (t: number) => void
+}) {
   const [revealed, setRevealed] = useState(false)
-  // generate a random number once — 8 digits after 888
-  const [storedNum] = useState<StoredNumber>(() => {
-    const digits = generatePhone888Digits()
-    const raw = `888${digits}`
-    // формат +888 XXXX XXXX
-    const formatted = `+888 ${digits.slice(0, 4)} ${digits.slice(4, 8)}`
-    return { uid: `888-${Date.now()}-${Math.random().toString(36).slice(2)}`, raw, formatted, bgIndex: Math.floor(Math.random() * 8) }
-  })
+  const [storedNum, setStoredNum] = useState<StoredNumber>(() => makeNewNumber())
+  const [cooldown, setCooldown] = useState(0) // секунды до следующей генерации
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Восстанавливаем кулдаун при маунте если кнопка была нажата недавно
+  useEffect(() => {
+    const elapsed = Math.floor((Date.now() - lastGenTime) / 1000)
+    const remaining = 60 - elapsed
+    if (remaining > 0) setCooldown(remaining)
+  }, [])
+
+  // Тик кулдауна
+  useEffect(() => {
+    if (cooldown <= 0) { if (cooldownRef.current) clearInterval(cooldownRef.current); return }
+    cooldownRef.current = setInterval(() => {
+      setCooldown(c => {
+        if (c <= 1) { if (cooldownRef.current) clearInterval(cooldownRef.current!); return 0 }
+        return c - 1
+      })
+    }, 1000)
+    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }
+  }, [cooldown > 0 ? 1 : 0]) // стартуем интервал только при переходе 0→>0
 
   const handleReveal = () => {
     haptic(15)
     setRevealed(true)
     onPurchase(storedNum)
+    setLastGenTime(Date.now())
+    setCooldown(60)
+  }
+
+  const handleRegenerate = () => {
+    if (cooldown > 0) return
+    haptic()
+    const num = makeNewNumber()
+    setStoredNum(num)
+    setRevealed(false)
+    setLastGenTime(Date.now())
+    setCooldown(60)
   }
 
   return (
@@ -1074,27 +1119,33 @@ function Phone888Page({ onPurchase }: { onPurchase: (num: StoredNumber) => void 
           </div>
         </div>
 
-        {/* CTA */}
-        <button
-          className="p888-btn"
-          onClick={handleReveal}
-          disabled={revealed}
-        >
-          {revealed ? (
-            'Номер разблокирован'
-          ) : (
-            <>
-              Разблокировать номер
-              <span className="p888-btn-stars">
-                <svg width="14" height="14" viewBox="0 0 22 22" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
-                  <path d="M8.17 7.475L10.12 3.608C10.344 3.174 10.946 2.98 11.397 3.195C11.573 3.281 11.753 3.445 11.839 3.625L13.691 7.402C13.842 7.711 14.087 7.866 14.422 7.909L18.233 8.364C18.796 8.433 19.196 8.996 19.131 9.529C19.105 9.748 19.007 9.98 18.852 10.135L15.801 13.156C15.677 13.28 15.646 13.422 15.668 13.594L16.162 17.68C16.235 18.269 15.767 18.81 15.187 18.883C14.968 18.909 14.714 18.883 14.516 18.776L11.35 17.031C11.049 16.877 10.838 16.885 10.602 17.01L7.319 18.711C6.846 18.956 6.189 18.763 5.948 18.286C5.858 18.106 5.785 17.916 5.819 17.676L6.073 15.824C6.21 14.823 6.812 13.985 7.628 13.564L11.105 11.755C11.324 11.626 11.337 11.506 11.014 11.548L6.709 12.137C6.013 12.236 5.265 11.987 4.719 11.54L3.224 10.298C2.807 9.971 2.734 9.245 3.087 8.807C3.25 8.605 3.512 8.42 3.766 8.386L7.65 7.883C7.899 7.857 8.062 7.703 8.174 7.475Z" fill="url(#sg888)" stroke="none"/>
-                  <defs><linearGradient id="sg888" x1="11" y1="3" x2="11" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#FFB600"/><stop offset="1" stopColor="#ED8200"/></linearGradient></defs>
-                </svg>
-                9
-              </span>
-            </>
-          )}
-        </button>
+        {/* Кулдаун подсказка */}
+        {cooldown > 0 && !revealed && (
+          <p className="p888-cooldown">Новый номер через {cooldown} с</p>
+        )}
+
+        {/* Кнопки */}
+        {revealed ? (
+          <div className="p888-actions">
+            <button className="p888-btn p888-btn--apply" onClick={() => { haptic(15); onApply(storedNum) }}>
+              Применить номер
+            </button>
+            <button className="p888-btn p888-btn--regen" onClick={handleRegenerate} disabled={cooldown > 0}>
+              {cooldown > 0 ? `Новый через ${cooldown} с` : 'Сгенерировать новый'}
+            </button>
+          </div>
+        ) : (
+          <button className="p888-btn" onClick={handleReveal} disabled={cooldown > 0 && revealed}>
+            Разблокировать номер
+            <span className="p888-btn-stars">
+              <svg width="14" height="14" viewBox="0 0 22 22" fill="none" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+                <path d="M8.17 7.475L10.12 3.608C10.344 3.174 10.946 2.98 11.397 3.195C11.573 3.281 11.753 3.445 11.839 3.625L13.691 7.402C13.842 7.711 14.087 7.866 14.422 7.909L18.233 8.364C18.796 8.433 19.196 8.996 19.131 9.529C19.105 9.748 19.007 9.98 18.852 10.135L15.801 13.156C15.677 13.28 15.646 13.422 15.668 13.594L16.162 17.68C16.235 18.269 15.767 18.81 15.187 18.883C14.968 18.909 14.714 18.883 14.516 18.776L11.35 17.031C11.049 16.877 10.838 16.885 10.602 17.01L7.319 18.711C6.846 18.956 6.189 18.763 5.948 18.286C5.858 18.106 5.785 17.916 5.819 17.676L6.073 15.824C6.21 14.823 6.812 13.985 7.628 13.564L11.105 11.755C11.324 11.626 11.337 11.506 11.014 11.548L6.709 12.137C6.013 12.236 5.265 11.987 4.719 11.54L3.224 10.298C2.807 9.971 2.734 9.245 3.087 8.807C3.25 8.605 3.512 8.42 3.766 8.386L7.65 7.883C7.899 7.857 8.062 7.703 8.174 7.475Z" fill="url(#sg888)" stroke="none"/>
+                <defs><linearGradient id="sg888" x1="11" y1="3" x2="11" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#FFB600"/><stop offset="1" stopColor="#ED8200"/></linearGradient></defs>
+              </svg>
+              9
+            </span>
+          </button>
+        )}
 
         {!revealed && (
           <p className="p888-hint">Номер станет виден сразу после оплаты</p>
@@ -1753,6 +1804,7 @@ function _ProfilePage({
   ownedGifts,
   onSelectGift,
   wornGift,
+  wornNumber,
   tgUser,
 }: {
   onGifts: () => void
@@ -1761,6 +1813,7 @@ function _ProfilePage({
   ownedGifts: AnyOwnedGift[]
   onSelectGift: (owned: AnyOwnedGift) => void
   wornGift: WornGift | null
+  wornNumber: StoredNumber | null
   tgUser: ReturnType<typeof getTgUser>
 }) {
   const displayName = getTgDisplayName(tgUser)
@@ -1799,6 +1852,14 @@ function _ProfilePage({
                 <div className="profile-row-label">био</div>
                 <button className="profile-row-value muted">Добавьте описание</button>
               </div>
+              {wornNumber && (
+                <div className="profile-row-static">
+                  <div className="profile-row-label">номер телефона</div>
+                  <div className="profile-row-value" style={{ color: '#f5f5f5' }}>
+                    {wornNumber.formatted}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2164,13 +2225,19 @@ export default function App() {
 
   // +888 хранилище
   const [storedNumbers, setStoredNumbers] = useState<StoredNumber[]>([])
+  const [wornNumber, setWornNumber] = useState<StoredNumber | null>(null)
+  const [lastGenTime, setLastGenTime] = useState<number>(0)
 
   const handleNumberPurchase = useCallback((num: StoredNumber) => {
     setStoredNumbers(prev => {
-      // не дублировать если уже есть (тот же uid)
       if (prev.some(n => n.uid === num.uid)) return prev
       return [...prev, num]
     })
+  }, [])
+
+  const handleNumberApply = useCallback((num: StoredNumber) => {
+    setWornNumber(num)
+    haptic(20)
   }, [])
 
   // Выбранный подарок для detail sheet
@@ -2261,6 +2328,7 @@ export default function App() {
             ownedGifts={ownedGifts}
             onSelectGift={handleSelectGift}
             wornGift={wornGift}
+            wornNumber={wornNumber}
             tgUser={tgUser}
           />
         </div>
@@ -2280,7 +2348,12 @@ export default function App() {
         </div>
 
         <div className={`page-layer${page === 'phone888' ? ' page-layer--active' : ''}`}>
-          <Phone888Page onPurchase={handleNumberPurchase} />
+          <Phone888Page
+            onPurchase={handleNumberPurchase}
+            onApply={handleNumberApply}
+            lastGenTime={lastGenTime}
+            setLastGenTime={setLastGenTime}
+          />
         </div>
 
         {/* Таббар */}
