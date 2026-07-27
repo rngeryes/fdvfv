@@ -798,7 +798,7 @@ function NumberCardPreview({ num }: { num: StoredNumber }) {
       <defs>
         <radialGradient id={`bg-${num.uid}`} cx="50%" cy="40%" r="70%">
           <stop offset="0%" stopColor="#1a2a3a" />
-          <stop offset="100%" stopColor="#0d1b2a" />
+          <stop offset="100%" stopColor="#253841" />
         </radialGradient>
         <pattern id={`dot-${num.uid}`} width="8" height="8" patternUnits="userSpaceOnUse">
           <circle cx="1" cy="1" r="0.6" fill="rgba(255,255,255,0.04)" />
