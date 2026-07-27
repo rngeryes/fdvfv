@@ -800,18 +800,25 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
     canvas.height = H * DPR
     ctx.scale(DPR, DPR)
 
-    const COUNT = 300
+    const COUNT = 320
     type P = { x: number; y: number; vx: number; vy: number; size: number; alpha: number; flicker: number; phase: number }
-    const particles: P[] = Array.from({ length: COUNT }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.55,
-      vy: (Math.random() - 0.5) * 0.55,
-      size: Math.random() < 0.6 ? 1 : 2, // преимущественно 1px
-      alpha: Math.random() * 0.45 + 0.15, // серые, не белые: 0.15–0.60
-      flicker: Math.random() * 0.04 + 0.01,
-      phase: Math.random() * Math.PI * 2,
-    }))
+    const particles: P[] = Array.from({ length: COUNT }, () => {
+      // 70% частиц — прозрачные (0.08–0.28), 30% — светлее (0.35–0.65)
+      const transparent = Math.random() < 0.70
+      return {
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.55,
+        vy: (Math.random() - 0.5) * 0.55,
+        // размер: 1px, 2px или редко 3px
+        size: Math.random() < 0.5 ? 1 : Math.random() < 0.75 ? 2 : 3,
+        alpha: transparent
+          ? Math.random() * 0.20 + 0.08
+          : Math.random() * 0.30 + 0.35,
+        flicker: Math.random() * 0.04 + 0.01,
+        phase: Math.random() * Math.PI * 2,
+      }
+    })
 
     let frame = 0
     const draw = () => {
@@ -833,7 +840,7 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
         const a = p.alpha * flicker * o
 
         // fillRect = чёткий пиксель, без сглаживания
-        ctx.fillStyle = `rgba(180,180,180,${a})`
+        ctx.fillStyle = `rgba(215,215,215,${a})`
         ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size)
       }
 
