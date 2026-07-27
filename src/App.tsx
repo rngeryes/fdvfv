@@ -913,16 +913,27 @@ function GiftCard({ gift, onClick }: { gift: Gift; onClick: () => void }) {
 function GiftsPage({
   onBack,
   onBuy,
+  isActive,
 }: {
   onBack: () => void
   onBuy: (gift: Gift) => void
+  isActive: boolean
 }) {
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const prevActive = useRef(false)
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1000)
-    return () => clearTimeout(t)
-  }, [])
+    // Запускаем скелетон каждый раз при входе на вкладку
+    if (isActive && !prevActive.current) {
+      setLoading(true)
+      const t = setTimeout(() => setLoading(false), 1000)
+      prevActive.current = true
+      return () => clearTimeout(t)
+    }
+    if (!isActive) {
+      prevActive.current = false
+    }
+  }, [isActive])
 
   return (
     <div className="gifts-root">
@@ -1097,7 +1108,7 @@ export default function App() {
       </div>
 
       <div className={`page-layer${page === 'gifts' ? ' page-layer--active' : ''}`}>
-        <GiftsPage onBack={goProfile} onBuy={goBuy} />
+        <GiftsPage onBack={goProfile} onBuy={goBuy} isActive={page === 'gifts'} />
       </div>
 
       <div className={`page-layer${page === 'buy' ? ' page-layer--active' : ''}`}>
