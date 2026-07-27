@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
-import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
 import { motion } from 'framer-motion'
 import './App.css'
 
@@ -156,8 +155,8 @@ interface UpgradeResult {
   serialNumber: number
 }
 
-// ─── GiftLottie — универсальный плеер для любого гифта ───────────────────────
-function GiftLottie({
+// ─── GiftImage — статичный PNG вместо тяжёлого TGS ──────────────────────────
+function GiftImage({
   giftName,
   modelName,
   onReady,
@@ -168,25 +167,16 @@ function GiftLottie({
   onReady?: () => void
   className?: string
 }) {
-  const url = `${CDN}/models/${encodeURIComponent(giftName)}/lottie/${encodeURIComponent(modelName)}.json`
-  const notified = useRef(false)
-
-  const handleLoad = useCallback(() => {
-    if (!notified.current) {
-      notified.current = true
-      onReady?.()
-    }
-  }, [onReady])
+  const url = `${CDN}/models/${encodeURIComponent(giftName)}/png/${encodeURIComponent(modelName)}.png`
 
   return (
-    <LottiePlayer
-      path={url}
-      play
-      loop
+    <img
+      src={url}
+      alt={modelName}
       className={className}
-      style={{ width: '100%', height: '100%' }}
-      rendererSettings={{ preserveAspectRatio: 'xMidYMid meet' }}
-      onLoad={handleLoad}
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      onLoad={onReady}
+      draggable={false}
     />
   )
 }
@@ -354,7 +344,7 @@ function UpgradeModal({
                 if (!isActive && !isNext) return null
                 return (
                   <motion.div key={m.name} className="upgrade-lottie-slot" animate={{ opacity: isActive ? 1 : 0 }} transition={{ duration: 0.5 }}>
-                    <GiftLottie giftName={giftName} modelName={m.name} onReady={isActive ? handleTgsReady : undefined} className="upgrade-lottie" />
+                    <GiftImage giftName={giftName} modelName={m.name} onReady={isActive ? handleTgsReady : undefined} className="upgrade-lottie" />
                   </motion.div>
                 )
               })}
@@ -372,7 +362,7 @@ function UpgradeModal({
               >
                 {rouletteModels.map((m, i) => (
                   <div key={i} className="upgrade-roulette-item">
-                    <GiftLottie giftName={giftName} modelName={m.name} className="upgrade-lottie" />
+                    <GiftImage giftName={giftName} modelName={m.name} className="upgrade-lottie" />
                   </div>
                 ))}
               </motion.div>
@@ -383,7 +373,7 @@ function UpgradeModal({
           {phase === 'result' && giftName && result && (
             <div className="upgrade-lottie-wrap" style={{ opacity: 1 }}>
               <div className="upgrade-lottie-slot" style={{ opacity: 1 }}>
-                <GiftLottie giftName={giftName} modelName={result.model.name} className="upgrade-lottie" />
+                <GiftImage giftName={giftName} modelName={result.model.name} className="upgrade-lottie" />
               </div>
             </div>
           )}
