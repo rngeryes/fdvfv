@@ -800,11 +800,11 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
     canvas.height = H * DPR
     ctx.scale(DPR, DPR)
 
-    const COUNT = 320
+    const COUNT = 520
     type P = { x: number; y: number; vx: number; vy: number; size: number; alpha: number; flicker: number; phase: number }
     const particles: P[] = Array.from({ length: COUNT }, () => {
-      // 70% частиц — прозрачные (0.08–0.28), 30% — светлее (0.35–0.65)
-      const transparent = Math.random() < 0.70
+      // 50% частиц — прозрачные (0.08–0.28), 50% — светлее (0.35–0.65)
+      const transparent = Math.random() < 0.50
       return {
         x: Math.random() * W,
         y: Math.random() * H,
