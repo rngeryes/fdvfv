@@ -979,9 +979,6 @@ function GiftDetailSheet({
   const centerColor = upgraded ? upgraded.backdrop.hex.centerColor : '#363738'
   const edgeColor   = upgraded ? upgraded.backdrop.hex.edgeColor   : '#1a1a1c'
   const patternColor = upgraded ? upgraded.backdrop.hex.patternColor : '#555'
-  const pngUrl = upgraded
-    ? `${CDN}/models/${encodeURIComponent(upgraded.giftCdnName)}/png/${encodeURIComponent(upgraded.model.name)}.png`
-    : null
   // Символ узора для SVG-паттерна фона (как в 555)
   const patternSymbolUrl = upgraded
     ? `${CDN}/patterns/${encodeURIComponent(upgraded.giftCdnName)}/png/${encodeURIComponent(upgraded.pattern.name)}.png`
