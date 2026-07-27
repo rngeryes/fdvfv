@@ -790,26 +790,36 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const W = canvas.width  = canvas.offsetWidth
-    const H = canvas.height = canvas.offsetHeight
+    // sharp pixels — отключаем сглаживание
+    ctx.imageSmoothingEnabled = false
 
-    // particles
-    const COUNT = 220
-    type P = { x: number; y: number; vx: number; vy: number; r: number; alpha: number }
+    const DPR = window.devicePixelRatio || 1
+    const W = canvas.offsetWidth
+    const H = canvas.offsetHeight
+    canvas.width  = W * DPR
+    canvas.height = H * DPR
+    ctx.scale(DPR, DPR)
+
+    const COUNT = 300
+    type P = { x: number; y: number; vx: number; vy: number; size: number; alpha: number; flicker: number; phase: number }
     const particles: P[] = Array.from({ length: COUNT }, () => ({
       x: Math.random() * W,
       y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.6,
-      vy: (Math.random() - 0.5) * 0.6,
-      r: Math.random() * 1.6 + 0.4,
-      alpha: Math.random() * 0.7 + 0.3,
+      vx: (Math.random() - 0.5) * 0.55,
+      vy: (Math.random() - 0.5) * 0.55,
+      size: Math.random() < 0.6 ? 1 : 2, // преимущественно 1px
+      alpha: Math.random() * 0.45 + 0.15, // серые, не белые: 0.15–0.60
+      flicker: Math.random() * 0.04 + 0.01,
+      phase: Math.random() * Math.PI * 2,
     }))
 
+    let frame = 0
     const draw = () => {
       ctx.clearRect(0, 0, W, H)
       const o = opacityRef.current
       if (o <= 0) { cancelAnimationFrame(animRef.current); return }
 
+      frame++
       for (const p of particles) {
         p.x += p.vx
         p.y += p.vy
@@ -818,10 +828,13 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
         if (p.y < 0) p.y = H
         if (p.y > H) p.y = 0
 
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${p.alpha * o})`
-        ctx.fill()
+        // небольшое мерцание
+        const flicker = 0.5 + 0.5 * Math.sin(frame * p.flicker + p.phase)
+        const a = p.alpha * flicker * o
+
+        // fillRect = чёткий пиксель, без сглаживания
+        ctx.fillStyle = `rgba(180,180,180,${a})`
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size)
       }
 
       animRef.current = requestAnimationFrame(draw)
@@ -831,7 +844,6 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
     return () => cancelAnimationFrame(animRef.current)
   }, [])
 
-  // Fade out when revealed
   useEffect(() => {
     if (!revealed) { opacityRef.current = 1; return }
     const start = performance.now()
@@ -854,6 +866,7 @@ function SpoilerCanvas({ revealed }: { revealed: boolean }) {
         height: '100%',
         borderRadius: 'inherit',
         pointerEvents: 'none',
+        imageRendering: 'pixelated',
       }}
     />
   )
