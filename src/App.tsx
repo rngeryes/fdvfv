@@ -749,11 +749,13 @@ function BottomNav({
   onGifts,
   onProfile,
   avatarSrc,
+  avatarName,
 }: {
   page: Page
   onGifts: () => void
   onProfile: () => void
-  avatarSrc: string
+  avatarSrc: string | null
+  avatarName: string
 }) {
   return (
     <div className="bottom-nav">
@@ -780,7 +782,7 @@ function BottomNav({
         aria-label="Профиль"
         style={{ background: 'radial-gradient(circle at 35% 30%, #f6a8ee, #d854a8 70%)' }}
       >
-        <img src={avatarSrc} alt="Avatar" />
+        <AvatarImg src={avatarSrc} name={avatarName} size={36} />
       </button>
     </div>
   )
@@ -955,6 +957,7 @@ function GiftDetailSheet({
   onWear,
   onUnwear,
   wornUid,
+  tgUser,
 }: {
   owned: AnyOwnedGift | null
   isOpen: boolean
@@ -963,9 +966,13 @@ function GiftDetailSheet({
   onWear: (owned: UpgradedOwnedGift) => void
   onUnwear: () => void
   wornUid: string | null
+  tgUser: ReturnType<typeof getTgUser>
 }) {
   const gift = owned ? GIFTS.find(g => g.id === owned.giftId) : null
   const isWorn = owned ? owned.uid === wornUid : false
+
+  const displayName = getTgDisplayName(tgUser)
+  const avatarSrc   = getTgAvatarSrc(tgUser)
 
   if (!owned || !gift) {
     return (
@@ -1156,8 +1163,13 @@ function GiftDetailSheet({
           <div className="gd-attr-row">
             <span className="gd-attr-key">Владелец</span>
             <span className="gd-attr-val gd-attr-val--owner">
-              <img src={AVATAR} alt="Avatar" className="gd-owner-avatar" />
-              <button className="gd-owner-name">username</button>
+              <AvatarImg
+                src={avatarSrc}
+                name={displayName}
+                className="gd-owner-avatar"
+                size={28}
+              />
+              <button className="gd-owner-name">{displayName}</button>
               {upgraded && (
                 <span className="gd-worn-badge">
                   <GiftLottie
@@ -1269,8 +1281,100 @@ function SettingsModal({
   )
 }
 
+// ─── Telegram user data ───────────────────────────────────────────────────────
+interface TelegramUser {
+  id?: number
+  first_name?: string
+  last_name?: string
+  username?: string
+  photo_url?: string
+  language_code?: string
+}
+
+function getTgUser(): TelegramUser | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user ?? null
+}
+
+function getTgDisplayName(user: ReturnType<typeof getTgUser>): string {
+  if (!user) return 'username'
+  const parts = [user.first_name, user.last_name].filter(Boolean)
+  return parts.length > 0 ? parts.join(' ') : (user.username ?? 'username')
+}
+
+function getTgUsername(user: ReturnType<typeof getTgUser>): string | null {
+  return user?.username ? `@${user.username}` : null
+}
+
+function getTgAvatarSrc(user: ReturnType<typeof getTgUser>): string | null {
+  if (!user) return null
+  // photo_url передаётся только в некоторых клиентах
+  if (user.photo_url) return user.photo_url
+  // fallback через t.me userpic если есть username
+  if (user.username) return `https://t.me/i/userpic/320/${user.username}.svg`
+  return null
+}
+
+// Аватарка с инициалами как запасной вариант
+function AvatarImg({
+  src,
+  name,
+  className,
+  style,
+  size = 48,
+}: {
+  src: string | null
+  name: string
+  className?: string
+  style?: React.CSSProperties
+  size?: number
+}) {
+  const [failed, setFailed] = useState(false)
+  const initials = name
+    .split(' ')
+    .map(w => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+
+  if (!src || failed) {
+    return (
+      <span
+        className={className}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'radial-gradient(circle at 35% 30%, #f6a8ee, #d854a8 70%)',
+          color: '#fff',
+          fontWeight: 700,
+          fontSize: size * 0.38,
+          borderRadius: '50%',
+          width: size,
+          height: size,
+          flexShrink: 0,
+          ...style,
+        }}
+        aria-label={name}
+      >
+        {initials || '?'}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      className={className}
+      style={style}
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
-const AVATAR = 'https://t.me/i/userpic/320/PJ_NMq7CXZkdOn96PPFv2KarbnQ0eS9Sz4og1T1zV6Q.svg'
 
 function _ProfilePage({
   onGifts: _onGifts,
@@ -1279,6 +1383,7 @@ function _ProfilePage({
   ownedGifts,
   onSelectGift,
   wornGift,
+  tgUser,
 }: {
   onGifts: () => void
   onShowRating: () => void
@@ -1286,7 +1391,12 @@ function _ProfilePage({
   ownedGifts: AnyOwnedGift[]
   onSelectGift: (owned: AnyOwnedGift) => void
   wornGift: WornGift | null
+  tgUser: ReturnType<typeof getTgUser>
 }) {
+  const displayName = getTgDisplayName(tgUser)
+  const username    = getTgUsername(tgUser)
+  const avatarSrc   = getTgAvatarSrc(tgUser)
+
   // Profile bg: worn gift backdrop or default dark
   const bgColor = wornGift
     ? wornGift.backdrop.hex.edgeColor
@@ -1303,16 +1413,18 @@ function _ProfilePage({
         <div style={{ minHeight: '100dvh' }}>
           <div className="profile-info-card">
             <div className="profile-info-inner">
-              <button
-                className="profile-row"
-                onClick={() => { haptic(); navigator.clipboard?.writeText('@test') }}
-              >
-                <div className="profile-row-content">
-                  <div className="profile-row-label">имя пользователя</div>
-                  <div className="profile-row-value link">@test</div>
-                </div>
-                <IconCopy />
-              </button>
+              {username && (
+                <button
+                  className="profile-row"
+                  onClick={() => { haptic(); navigator.clipboard?.writeText(username) }}
+                >
+                  <div className="profile-row-content">
+                    <div className="profile-row-label">имя пользователя</div>
+                    <div className="profile-row-value link">{username}</div>
+                  </div>
+                  <IconCopy />
+                </button>
+              )}
               <div className="profile-row-static">
                 <div className="profile-row-label">био</div>
                 <button className="profile-row-value muted">Добавьте описание</button>
@@ -1399,14 +1511,19 @@ function _ProfilePage({
             <div className="profile-avatar-glow" style={wornGift ? {
               background: `radial-gradient(circle, ${wornGift.backdrop.hex.centerColor}55 30%, transparent 72%)`
             } : undefined} />
-            <img src={AVATAR} alt="Avatar" className="profile-avatar-img" />
+            <AvatarImg
+              src={avatarSrc}
+              name={displayName}
+              className="profile-avatar-img"
+              size={72}
+            />
           </button>
         </div>
 
         {/* Username + worn gift TGS badge */}
         <div className="profile-name-wrap">
           <div className="profile-name-row">
-            <button className="profile-name-btn">username</button>
+            <button className="profile-name-btn">{displayName}</button>
             {wornGift && (
               <button
                 className="profile-worn-badge"
@@ -1481,10 +1598,12 @@ function _GiftsPage({
   onBack,
   onBuy,
   isActive,
+  tgUser,
 }: {
   onBack: () => void
   onBuy: (gift: Gift) => void
   isActive: boolean
+  tgUser: ReturnType<typeof getTgUser>
 }) {
   const [loading, setLoading] = useState(false)
   const prevActive = useRef(false)
@@ -1517,7 +1636,12 @@ function _GiftsPage({
       <div className="gifts-scroll no-scrollbar">
         <div className="gifts-user-header">
           <div className="gifts-avatar-wrap">
-            <img src={AVATAR} alt="Avatar" className="gifts-avatar" />
+            <AvatarImg
+              src={getTgAvatarSrc(tgUser)}
+              name={getTgDisplayName(tgUser)}
+              className="gifts-avatar"
+              size={56}
+            />
           </div>
           <h1 className="gifts-title">Купить подарок</h1>
           <p className="gifts-desc">
@@ -1643,6 +1767,16 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [sparksEnabled, setSparksEnabled] = useState(true)
 
+  // Telegram user
+  const [tgUser] = useState(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any)?.Telegram?.WebApp?.ready?.()
+    return getTgUser()
+  })
+
+  const tgAvatarSrc  = getTgAvatarSrc(tgUser)
+  const tgDisplayName = getTgDisplayName(tgUser)
+
   // Инвентарь
   const [ownedGifts, setOwnedGifts] = useState<AnyOwnedGift[]>([])
 
@@ -1732,11 +1866,12 @@ export default function App() {
             ownedGifts={ownedGifts}
             onSelectGift={handleSelectGift}
             wornGift={wornGift}
+            tgUser={tgUser}
           />
         </div>
 
         <div className={`page-layer${page === 'gifts' ? ' page-layer--active' : ''}`}>
-          <GiftsPage onBack={goProfile} onBuy={goBuy} isActive={page === 'gifts'} />
+          <GiftsPage onBack={goProfile} onBuy={goBuy} isActive={page === 'gifts'} tgUser={tgUser} />
         </div>
 
         <div className={`page-layer${page === 'buy' ? ' page-layer--active' : ''}`}>
@@ -1750,7 +1885,8 @@ export default function App() {
           page={page === 'buy' ? 'gifts' : page}
           onGifts={navOnGifts}
           onProfile={navOnProfile}
-          avatarSrc={AVATAR}
+          avatarSrc={tgAvatarSrc}
+          avatarName={tgDisplayName}
         />
 
         <RatingModal isOpen={showRating} onClose={closeRating} />
@@ -1770,6 +1906,7 @@ export default function App() {
           onWear={handleWear}
           onUnwear={handleUnwear}
           wornUid={wornGift?.uid ?? null}
+          tgUser={tgUser}
         />
 
         <UpgradeModal
