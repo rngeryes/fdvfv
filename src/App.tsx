@@ -70,28 +70,10 @@ const GIFTS: Gift[] = [
   { id: 14, name: 'Signet Ring',    stars: 25   },
 ]
 
-// Маппинг подарков к SVG файлам
-const GIFT_ICONS: Record<number, string> = {
-  1: '/gifts/Pepe.svg',
-  2: '/gifts/calendar.svg',
-  3: '/gifts/lamp.svg',
-  4: '/gifts/heartlocket.svg',
-  5: '/gifts/lolipop.svg',
-  6: '/gifts/astral.svg',
-  7: '/gifts/parfume.svg',
-  8: '/gifts/escimo.svg',
-  9: '/gifts/durovcap.svg',
-  10: '/gifts/nekohelmet.svg',
-  11: '/gifts/spicedwine.svg',
-  12: '/gifts/lootbag.svg',
-  13: '/gifts/peach.svg',
-  14: '/gifts/signetring.svg',
-}
-
 // ─── CDN ──────────────────────────────────────────────────────────────────────
 const CDN = 'https://cdn.changes.tg/gifts'
 
-// Маппинг id гифта → точное имя папки на CDN
+// Маппинг id гифта → точное имя папки на CDN (для models/lottie/patterns)
 const GIFT_CDN_NAME: Record<number, string> = {
   1:  'Plush Pepe',
   2:  'Desk Calendar',
@@ -108,6 +90,38 @@ const GIFT_CDN_NAME: Record<number, string> = {
   13: 'Pet Snake',
   14: 'Signet Ring',
 }
+
+// Маппинг имени подарка (CDN) → числовой ID папки в originals/
+// Из https://cdn.changes.tg/gifts/id-to-name.json
+const GIFT_CDN_ORIG_ID: Record<string, string> = {
+  'Plush Pepe':    '5936013938331222567',
+  'Desk Calendar': '5782988952268964995',
+  'Genie Lamp':    '5933531623327795414',
+  'Heart Locket':  '5868455043362980631',
+  'Lol Pop':       '5170594532177215681',
+  'Astral Shard':  '5933629604416717361',
+  'Voodoo Doll':   '5836780359634649414',
+  'Vice Cream':    '5898012527257715797',
+  "Durov's Cap":   '5915521180483191380',
+  'Neko Helmet':   '5933793770951673155',
+  'Lunar Snake':   '6028426950047957932',
+  'Loot Bag':      '5868659926187901653',
+  'Pet Snake':     '6023917088358269866',
+  'Signet Ring':   '5936085638515261992',
+}
+
+// Возвращает URL оригинального PNG для подарка по CDN-имени
+function getOriginalPng(cdnName: string): string {
+  const origId = GIFT_CDN_ORIG_ID[cdnName]
+  if (origId) return `${CDN}/originals/${origId}/Original.png`
+  // fallback: models/png/Original.png
+  return `${CDN}/models/${encodeURIComponent(cdnName)}/png/Original.png`
+}
+
+// Маппинг giftId → PNG из CDN originals (для магазина и неулучшенных карточек)
+const GIFT_ICONS: Record<number, string> = Object.fromEntries(
+  Object.entries(GIFT_CDN_NAME).map(([id, name]) => [Number(id), getOriginalPng(name)])
+)
 
 // ─── CDN types ────────────────────────────────────────────────────────────────
 interface CdnBackdrop {
@@ -1324,6 +1338,43 @@ function _ProfilePage({
           className="profile-header-bg"
           style={{ backgroundColor: bgColor, backgroundImage: bgImage }}
         />
+
+        {/* Pattern overlay — показываем только когда надет подарок */}
+        {wornGift && (() => {
+          const origId = GIFT_CDN_ORIG_ID[wornGift.giftCdnName]
+          const patternImgUrl = origId
+            ? `${CDN}/originals/${origId}/Original.png`
+            : `${CDN}/models/${encodeURIComponent(wornGift.giftCdnName)}/png/Original.png`
+          const patternColor = wornGift.backdrop.hex.patternColor
+          const uid = wornGift.uid.replace(/[^a-z0-9]/gi, '')
+          return (
+            <svg
+              width="100%"
+              height="100%"
+              viewBox="0 0 416 416"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              preserveAspectRatio="xMidYMid slice"
+              className="profile-header-pattern"
+            >
+              <defs>
+                <filter id={`ph-flt-${uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="416" height="416">
+                  <feFlood floodColor={patternColor} />
+                  <feComposite in2="SourceGraphic" operator="in" />
+                </filter>
+                <image id={`ph-pat-${uid}`} x="-50" y="-50" width="100" height="100" href={patternImgUrl} crossOrigin="anonymous" />
+                <g id={`ph-grp-${uid}`}>
+                  {PATTERN_TRANSFORMS.map((t, i) => (
+                    <g key={i} opacity={t.opacity} transform={`translate(${t.tx}, ${t.ty}) scale(${t.scale})`}>
+                      <use href={`#ph-pat-${uid}`} />
+                    </g>
+                  ))}
+                </g>
+              </defs>
+              <use href={`#ph-grp-${uid}`} filter={`url(#ph-flt-${uid})`} />
+            </svg>
+          )
+        })()}
 
         {/* Settings button — at avatar level (top + 48px + avatar center offset) */}
         <div className="profile-settings-wrap">
