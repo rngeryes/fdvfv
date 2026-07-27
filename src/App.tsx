@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import './App.css'
 
 // ─── Haptic utility ───────────────────────────────────────────────────────────
@@ -773,7 +773,7 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 const AVATAR = 'https://t.me/i/userpic/320/PJ_NMq7CXZkdOn96PPFv2KarbnQ0eS9Sz4og1T1zV6Q.svg'
 
 function ProfilePage({
-  onGifts,
+  onGifts: _onGifts,
   onShowRating,
   onShowUpgrade,
 }: {
