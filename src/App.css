@@ -1975,6 +1975,35 @@
   margin: 0;
 }
 
+.p888-cooldown {
+  font-size: 13px;
+  color: #7b7b7b;
+  margin: -4px 0 0;
+}
+
+.p888-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.p888-btn--apply {
+  background: #34c759;
+  box-shadow: 0 8px 28px -8px rgba(52,199,89,0.5);
+}
+
+.p888-btn--regen {
+  background: #1C1C1D;
+  color: #f5f5f5;
+  box-shadow: none;
+}
+.p888-btn--regen:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
 /* ── Storage Page ── */
 .storage-root {
   width: 100%;
@@ -1983,42 +2012,7 @@
   display: flex;
   flex-direction: column;
   padding-top: var(--page-pt, 0px);
-}
-
-.storage-topbar {
-  padding: 16px 16px 8px;
-  flex-shrink: 0;
-}
-
-.storage-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #f5f5f5;
-  margin: 0;
-}
-
-.storage-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding-bottom: 80px;
-  text-align: center;
-}
-
-.storage-empty-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.6);
-  margin: 0;
-}
-
-.storage-empty-sub {
-  font-size: 14px;
-  color: rgba(255,255,255,0.3);
-  margin: 0;
+  overflow: hidden;
 }
 
 .storage-scroll {
@@ -2027,11 +2021,70 @@
   padding-bottom: 100px;
 }
 
+/* Шапка — как gifts-user-header */
+.storage-user-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px 8px;
+  text-align: center;
+}
+
+.storage-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: #1C1C1D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b7b7b;
+  margin-bottom: 12px;
+}
+
+.storage-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f5f5f5;
+  margin: 0 0 10px;
+  letter-spacing: -0.4px;
+}
+
+.storage-desc {
+  font-size: 15px;
+  line-height: 1.4;
+  color: #7b7b7b;
+  margin: 0;
+  max-width: 320px;
+}
+
+.storage-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.storage-empty-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  margin: 0;
+}
+
+.storage-empty-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.28);
+  margin: 0;
+}
+
 .storage-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  padding: 8px 12px 16px;
+  padding: 12px 12px 16px;
 }
 
 /* ── Number Card ── */
