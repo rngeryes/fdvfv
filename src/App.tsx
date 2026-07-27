@@ -847,9 +847,10 @@ function NumberCardPreview({ num }: { num: StoredNumber }) {
   )
 }
 
-function NumberCard({ num }: { num: StoredNumber }) {
+function NumberCard({ num, onClick }: { num: StoredNumber; onClick: () => void }) {
   return (
-    <div className="ncard">
+    <div className="ncard" onClick={() => { haptic(); onClick() }} role="button" tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && (haptic(), onClick())}>
       <div className="ncard-img-wrap">
         <NumberCardPreview num={num} />
       </div>
@@ -861,12 +862,163 @@ function NumberCard({ num }: { num: StoredNumber }) {
   )
 }
 
-function StoragePage({ numbers }: { numbers: StoredNumber[] }) {
+// ─── Number Detail Sheet ──────────────────────────────────────────────────────
+function NumberDetailSheet({
+  num,
+  isOpen,
+  onClose,
+  onApply,
+  wornUid,
+  tgUser,
+}: {
+  num: StoredNumber | null
+  isOpen: boolean
+  onClose: () => void
+  onApply: (num: StoredNumber) => void
+  wornUid: string | null
+  tgUser: ReturnType<typeof getTgUser>
+}) {
+  const isWorn = num ? num.uid === wornUid : false
+  const displayName = getTgDisplayName(tgUser)
+  const avatarSrc   = getTgAvatarSrc(tgUser)
+  const pal = num ? NUMBER_CARD_PALETTES[num.bgIndex % NUMBER_CARD_PALETTES.length] : NUMBER_CARD_PALETTES[0]
+
+  return (
+    <div className={`modal-overlay${isOpen ? ' open' : ''}`} onClick={onClose}>
+      <div
+        className="modal-sheet gift-detail-sheet-555"
+        role="dialog"
+        aria-modal="true"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header ── */}
+        <div className="gd-header" style={{ background: '#111827', minHeight: 240 }}>
+          {/* тёмный фон с лёгким синим оттенком */}
+          <div className="gd-backdrop" style={{
+            background: 'radial-gradient(60% 70% at 50% 30%, #1a2a3a 0%, #0d1117 100%)'
+          }} />
+
+          {/* Controls */}
+          <div className="gd-controls">
+            <button className="gd-ctrl-btn" aria-label="Закрыть" onClick={() => { haptic(); onClose() }}>
+              <IconClose />
+            </button>
+            <button className="gd-ctrl-btn" aria-label="Меню">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="3" cy="8" r="1.4" fill="currentColor"/>
+                <circle cx="8" cy="8" r="1.4" fill="currentColor"/>
+                <circle cx="13" cy="8" r="1.4" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* SVG превью */}
+          {num && (
+            <div className="gd-lottie-wrap" style={{ width: 160, height: 160 }}>
+              <NumberCardPreview num={num} />
+            </div>
+          )}
+
+          {/* Заголовок */}
+          <h2 className="gd-title" style={{ fontSize: 18 }}>{num?.formatted ?? ''}</h2>
+
+          {/* Кнопки действий */}
+          <div className="gd-actions-row">
+            {/* Передать */}
+            <button className="gd-action-btn" style={{ background: '#1f2937' }} onClick={() => haptic()}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M5 4 H12 L15 7 L9 14 L3 8 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="rgba(255,255,255,0.08)"/>
+                <path d="M14 16 H21 M18 13 L21 16 L18 19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Передать</span>
+            </button>
+
+            {/* Применить / Снять */}
+            <button
+              className="gd-action-btn"
+              style={{ background: isWorn ? '#1f2937' : pal.pill }}
+              onClick={() => {
+                haptic()
+                if (num) onApply(num)
+                onClose()
+              }}
+            >
+              {isWorn ? (
+                <>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 3 L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                    <path d="M6 6 L4 12 H20 L18 6" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Снять</span>
+                </>
+              ) : (
+                <>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 12 H20 L18 6 H6 Z" stroke="white" strokeWidth="1.6" strokeLinejoin="round"/>
+                    <path d="M12 12 V20 M9 20 H15" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                  <span>Применить</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Таблица атрибутов ── */}
+        <div className="gd-attr-table">
+          <div className="gd-attr-row">
+            <span className="gd-attr-key">Владелец</span>
+            <span className="gd-attr-val gd-attr-val--owner">
+              <AvatarImg src={avatarSrc} name={displayName} className="gd-owner-avatar" size={22} />
+              <span className="gd-owner-name">{displayName}</span>
+            </span>
+          </div>
+          <div className="gd-attr-row">
+            <span className="gd-attr-key">Номер</span>
+            <span className="gd-attr-val">
+              <span className="gd-attr-text">{num?.formatted}</span>
+            </span>
+          </div>
+          <div className="gd-attr-row">
+            <span className="gd-attr-key">Тип</span>
+            <span className="gd-attr-val">
+              <span className="gd-attr-text">Anonymous +888</span>
+              <span className="upgrade-rarity-badge">NFT</span>
+            </span>
+          </div>
+          <div className="gd-attr-row">
+            <span className="gd-attr-key">Статус</span>
+            <span className="gd-attr-val">
+              <span className="gd-attr-text" style={{ color: isWorn ? '#34c759' : '#7b7b7b' }}>
+                {isWorn ? 'Применён в профиле' : 'Не применён'}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div className="gd-visibility-hint">
+          Применённый номер отображается в вашем профиле.
+        </div>
+
+        <div className="gd-ok-wrap">
+          <button className="gd-ok-btn" onClick={() => { haptic(); onClose() }}>OK</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StoragePage({ numbers, onApply, wornUid, tgUser }: {
+  numbers: StoredNumber[]
+  onApply: (num: StoredNumber) => void
+  wornUid: string | null
+  tgUser: ReturnType<typeof getTgUser>
+}) {
+  const [selected, setSelected] = useState<StoredNumber | null>(null)
+
   return (
     <div className="storage-root">
       <div className="storage-scroll no-scrollbar">
-
-        {/* Шапка — по центру как в +888 */}
         <div className="storage-hero">
           <h1 className="storage-heading">Хранилище</h1>
           <p className="storage-desc">
@@ -882,10 +1034,21 @@ function StoragePage({ numbers }: { numbers: StoredNumber[] }) {
           </div>
         ) : (
           <div className="storage-grid">
-            {numbers.map(n => <NumberCard key={n.uid} num={n} />)}
+            {numbers.map(n => (
+              <NumberCard key={n.uid} num={n} onClick={() => setSelected(n)} />
+            ))}
           </div>
         )}
       </div>
+
+      <NumberDetailSheet
+        num={selected}
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        onApply={onApply}
+        wornUid={wornUid}
+        tgUser={tgUser}
+      />
     </div>
   )
 }
@@ -2343,7 +2506,12 @@ export default function App() {
         </div>
 
         <div className={`page-layer${page === 'storage' ? ' page-layer--active' : ''}`}>
-          <StoragePage numbers={storedNumbers} />
+          <StoragePage
+            numbers={storedNumbers}
+            onApply={handleNumberApply}
+            wornUid={wornNumber?.uid ?? null}
+            tgUser={tgUser}
+          />
         </div>
 
         <div className={`page-layer${page === 'phone888' ? ' page-layer--active' : ''}`}>
