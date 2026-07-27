@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import LottiePlayer from 'react-lottie-player/dist/LottiePlayerLight'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import './App.css'
+
+// ─── Haptic utility ───────────────────────────────────────────────────────────
+function haptic(duration = 10) {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(duration)
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Page = 'profile' | 'gifts' | 'buy'
@@ -300,7 +307,7 @@ function UpgradeModal({
         <div className="upgrade-header">
           <button
             className="modal-close-btn"
-            onClick={onClose}
+            onClick={() => { haptic(); onClose() }}
             disabled={phase === 'upgrading'}
             style={{ zIndex: 5, position: 'absolute', left: 8, top: 8, opacity: phase === 'upgrading' ? 0.35 : 1 }}
           >
@@ -421,7 +428,7 @@ function UpgradeModal({
               </div>
             </div>
             <div className="upgrade-cta-wrap">
-              <button className="upgrade-btn" onClick={onClose}>OK</button>
+              <button className="upgrade-btn" onClick={() => { haptic(); onClose() }}>OK</button>
             </div>
           </>
         ) : (
@@ -479,7 +486,7 @@ function UpgradeModal({
             <div className="upgrade-cta-wrap">
               <button
                 className="upgrade-btn"
-                onClick={handleUpgrade}
+                onClick={() => { haptic(15); handleUpgrade() }}
                 disabled={phase === 'upgrading' || models.length === 0}
               >
                 {phase === 'upgrading' ? 'Улучшаем...' : (
@@ -668,7 +675,7 @@ function BottomNav({
       <button
         className={`bnav-item${page === 'gifts' ? ' active' : ''}`}
         onClick={() => {
-          if (navigator.vibrate) navigator.vibrate(10)
+          haptic()
           onGifts()
         }}
         onMouseEnter={e => {
@@ -683,7 +690,7 @@ function BottomNav({
       </button>
       <button
         className="bnav-avatar-btn"
-        onClick={onProfile}
+        onClick={() => { haptic(); onProfile() }}
         aria-label="Профиль"
         style={{ background: 'radial-gradient(circle at 35% 30%, #f6a8ee, #d854a8 70%)' }}
       >
@@ -702,7 +709,7 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     >
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <button className="modal-close-btn" onClick={onClose}><IconClose /></button>
+          <button className="modal-close-btn" onClick={() => { haptic(); onClose() }}><IconClose /></button>
           <span className="modal-title">Рейтинг</span>
         </div>
 
@@ -756,7 +763,7 @@ function RatingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
           </div>
         </div>
 
-        <button className="rating-ok-btn" onClick={onClose}>OK</button>
+        <button className="rating-ok-btn" onClick={() => { haptic(); onClose() }}>OK</button>
       </div>
     </div>
   )
@@ -775,7 +782,7 @@ function ProfilePage({
   onShowUpgrade: (giftId: number) => void
 }) {
   return (
-    <div className="profile-root">
+    <div className="profile-root page-fade">
       <div className="profile-scroll no-scrollbar">
         <div style={{ height: 'calc(var(--page-pt, 0px) + 5px)' }} aria-hidden="true" />
 
@@ -784,7 +791,7 @@ function ProfilePage({
             <div className="profile-info-inner">
               <button
                 className="profile-row"
-                onClick={() => navigator.clipboard?.writeText('@test')}
+                onClick={() => { haptic(); navigator.clipboard?.writeText('@test') }}
               >
                 <div className="profile-row-content">
                   <div className="profile-row-label">имя пользователя</div>
@@ -805,10 +812,10 @@ function ProfilePage({
                 <div
                   key={gift.id}
                   className="profile-gift-cell"
-                  onClick={() => onShowUpgrade(gift.id)}
+                  onClick={() => { haptic(); onShowUpgrade(gift.id) }}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && onShowUpgrade(gift.id)}
+                  onKeyDown={e => e.key === 'Enter' && (haptic(), onShowUpgrade(gift.id))}
                 >
                   <div className="profile-gift-backdrop" style={{ background: '#1C1C1D' }} />
                   <div className="profile-gift-img">
@@ -855,7 +862,7 @@ function ProfilePage({
         </div>
 
         <div className="profile-status-wrap">
-          <button className="profile-level-btn" aria-label="Рейтинг" onClick={onShowRating}>
+          <button className="profile-level-btn" aria-label="Рейтинг" onClick={() => { haptic(); onShowRating() }}>
             <LevelBadge />
           </button>
           <span className="profile-online">в сети</span>
@@ -867,12 +874,22 @@ function ProfilePage({
   )
 }
 
+// ─── Gift Card Skeleton ───────────────────────────────────────────────────────
+function GiftCardSkeleton() {
+  return (
+    <div className="gift-card-skeleton">
+      <div className="skeleton-img" />
+      <div className="skeleton-price" />
+    </div>
+  )
+}
+
 // ─── Gift Card ────────────────────────────────────────────────────────────────
 function GiftCard({ gift, onClick }: { gift: Gift; onClick: () => void }) {
   const iconSrc = GIFT_ICONS[gift.id]
   
   return (
-    <button className="gift-card" onClick={onClick} style={{ animationDelay: `${gift.id * 0.035}s` }}>
+    <button className="gift-card" onClick={() => { haptic(); onClick() }} style={{ animationDelay: `${gift.id * 0.035}s` }}>
       <div className="gift-card-img">
         {iconSrc ? (
           <img src={iconSrc} alt={gift.name} className="gift-icon" />
@@ -901,13 +918,20 @@ function GiftsPage({
   onBack: () => void
   onBuy: (gift: Gift) => void
 }) {
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 1000)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
-    <div className="gifts-root">
+    <div className="gifts-root page-fade">
       <div className="gifts-glow-bg" aria-hidden="true" />
 
       <div className="gifts-topbar">
         <div className="gifts-topbar-inner">
-          <button className="gifts-back-btn" aria-label="Выйти в меню" onClick={onBack}>
+          <button className="gifts-back-btn" aria-label="Выйти в меню" onClick={() => { haptic(); onBack() }}>
             <IconChevronLeft />
           </button>
         </div>
@@ -926,9 +950,12 @@ function GiftsPage({
         </div>
 
         <div className="gifts-grid">
-          {GIFTS.map(g => (
-            <GiftCard key={g.id} gift={g} onClick={() => onBuy(g)} />
-          ))}
+          {loading
+            ? GIFTS.map(g => <GiftCardSkeleton key={g.id} />)
+            : GIFTS.map(g => (
+                <GiftCard key={g.id} gift={g} onClick={() => onBuy(g)} />
+              ))
+          }
         </div>
       </div>
 
@@ -947,7 +974,7 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
   const iconSrc = GIFT_ICONS[gift.id]
 
   return (
-    <div className="buy-root">
+    <div className="buy-root page-fade">
       <div className="buy-pattern-bg" aria-hidden="true">
         <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" className="buy-pattern-svg">
           {Array.from({ length: 8 }).map((_, row) =>
@@ -961,7 +988,7 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
       </div>
 
       <div className="buy-topbar">
-        <button className="buy-back-btn" onClick={onBack}><IconChevronLeft /></button>
+        <button className="buy-back-btn" onClick={() => { haptic(); onBack() }}><IconChevronLeft /></button>
       </div>
 
       <div className="buy-scroll no-scrollbar">
@@ -1031,11 +1058,11 @@ function BuyPage({ gift, onBack }: { gift: Gift; onBack: () => void }) {
 
       <div className="buy-action-bar">
         <div className="buy-qty-control">
-          <button className="buy-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}>−</button>
+          <button className="buy-qty-btn" onClick={() => { haptic(); setQty(q => Math.max(1, q - 1)) }} disabled={qty <= 1}>−</button>
           <span className="buy-qty-val">{qty}</span>
-          <button className="buy-qty-btn" onClick={() => setQty(q => q + 1)}>+</button>
+          <button className="buy-qty-btn" onClick={() => { haptic(); setQty(q => q + 1) }}>+</button>
         </div>
-        <button className="buy-confirm-btn">
+        <button className="buy-confirm-btn" onClick={() => haptic(15)}>
           Купить за&nbsp;<IconStar size={19} /><span>&nbsp;{total.toLocaleString('ru')}</span>
         </button>
       </div>
@@ -1060,19 +1087,48 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {page === 'profile' && (
-        <ProfilePage
-          onGifts={goGifts}
-          onShowRating={() => setShowRating(true)}
-          onShowUpgrade={openUpgrade}
-        />
-      )}
-      {page === 'gifts' && (
-        <GiftsPage onBack={goProfile} onBuy={goBuy} />
-      )}
-      {page === 'buy' && selectedGift && (
-        <BuyPage gift={selectedGift} onBack={goGifts} />
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {page === 'profile' && (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            <ProfilePage
+              onGifts={goGifts}
+              onShowRating={() => setShowRating(true)}
+              onShowUpgrade={openUpgrade}
+            />
+          </motion.div>
+        )}
+        {page === 'gifts' && (
+          <motion.div
+            key="gifts"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            <GiftsPage onBack={goProfile} onBuy={goBuy} />
+          </motion.div>
+        )}
+        {page === 'buy' && selectedGift && (
+          <motion.div
+            key="buy"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            <BuyPage gift={selectedGift} onBack={goGifts} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <RatingModal isOpen={showRating} onClose={() => setShowRating(false)} />
       <UpgradeModal
         isOpen={upgradeGiftId !== null}
